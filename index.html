@@ -22,7 +22,7 @@
 <body>
   <div id="root"></div>
   <script type="text/plain" id="app-source">
-const { useState } = React;
+const { useState, useEffect } = React;
 
 function Icon({ children, size = 16, color = "currentColor", style, strokeWidth = 2 }) {
   return (
@@ -104,6 +104,25 @@ async function enviarPresupuestoAN8N(datos) {
     console.error("Error de red al conectar con n8n:", error);
     return false;
   }
+}
+
+async function consultarPresupuestosN8N() {
+  const url = "https://n8n-n8n.vhtza8.easypanel.host/webhook/consultar-presupuestos";
+  try {
+    const respuesta = await fetch(url);
+    if (!respuesta.ok) return [];
+    return await respuesta.json();
+  } catch (error) {
+    console.error("Error al consultar presupuestos:", error);
+    return [];
+  }
+}
+
+function formatFecha(f) {
+  if (!f) return "";
+  const d = new Date(f);
+  if (isNaN(d.getTime())) return f;
+  return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
 }
 
 const LS_KEY = "lasautt_contratos_clientes";
@@ -1676,13 +1695,21 @@ En el supuesto de que se determinará la nulidad de cualquiera de los presentes 
 // ---------- Base de datos de clientes ----------
 
 function ClientesScreen() {
-  const [registros, setRegistros] = useState(() => leerRegistros());
+  const [registros, setRegistros] = useState([]);
+  const [cargando, setCargando] = useState(true);
   const [busqueda, setBusqueda] = useState("");
   const [expandido, setExpandido] = useState(null);
   const [filtroOficina, setFiltroOficina] = useState("");
 
+  useEffect(() => {
+    consultarPresupuestosN8N().then((datos) => {
+      setRegistros(datos);
+      setCargando(false);
+    });
+  }, []);
+
   function eliminar(id) {
-    setRegistros(eliminarRegistro(id));
+    setRegistros((prev) => prev.filter((r) => r.id !== id));
   }
 
 const grupos = {};
@@ -1724,7 +1751,11 @@ const listaGrupos = Object.values(grupos).filter((g) => {
         </div>
       </div>
 
-      {listaGrupos.length === 0 ? (
+      {cargando ? (
+        <div style={{ backgroundColor: "#fff", border: `1px solid ${HAIR}`, borderRadius: 14, padding: 40, textAlign: "center", color: MUTE, fontSize: 13.5 }}>
+          Cargando presupuestos...
+        </div>
+      ) : listaGrupos.length === 0 ? (
         <div style={{ backgroundColor: "#fff", border: `1px solid ${HAIR}`, borderRadius: 14, padding: 40, textAlign: "center", color: MUTE, fontSize: 13.5 }}>
           Todavía no hay clientes guardados. Ve a cualquier plantilla, rellena los datos y pulsa "Guardar en base de datos".
         </div>
@@ -1761,7 +1792,7 @@ const listaGrupos = Object.values(grupos).filter((g) => {
                       <div key={r.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 0", borderBottom: `1px solid ${HAIR}` }}>
                         <div>
                           <div style={{ fontSize: 12.5, fontWeight: 600, color: NAVY }}>{r.modelo}</div>
-                          <div style={{ fontSize: 11, color: MUTE, marginTop: 2 }}>{r.fecha}</div>
+                          <div style={{ fontSize: 11, color: MUTE, marginTop: 2 }}>{formatFecha(r.fecha)}</div>
                         </div>
                         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
                           <span style={{ fontSize: 13, fontWeight: 700, color: NAVY }}>{eur(Number(r.total) || 0)}</span>
