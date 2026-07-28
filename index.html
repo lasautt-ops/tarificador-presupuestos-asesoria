@@ -91,6 +91,21 @@ async function generarPDF(nombreArchivo = "propuesta") {
   pdf.save(`${nombreArchivo}.pdf`);
 }
 
+async function enviarPresupuestoAN8N(datos) {
+  const webhookUrl = "https://n8n-n8n.vhtza8.easypanel.host/webhook/guardar-presupuesto";
+  try {
+    const respuesta = await fetch(webhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(datos),
+    });
+    return respuesta.ok;
+  } catch (error) {
+    console.error("Error de red al conectar con n8n:", error);
+    return false;
+  }
+}
+
 const LS_KEY = "lasautt_contratos_clientes";
 
 function leerRegistros() {
@@ -318,11 +333,16 @@ function PlantillaFiscalSimple({ label, modeloId }) {
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           <button
-            onClick={() => {
-  guardarRegistro({ modelo: label, nombre: cliente.nombre || "Cliente sin nombre", empresa: contrato.representacion, cif: contrato.cif, total, oficina: cliente.oficina });
-  setGuardadoOk(true);
-  setTimeout(() => setGuardadoOk(false), 2500);
-}}
+            onClick={async () => {
+              const resumen = { modelo: label, nombre: cliente.nombre || "Cliente sin nombre", empresa: contrato.representacion, cif: contrato.cif, total, oficina: cliente.oficina };
+              const datosCompletos = { cliente, contrato, precioServicioFiscal, descuentoPct, aplicarDescuento, cuotaAlta, lineasExtra, serviciosExtra, nombreFirmante, deudor };
+              guardarRegistro(resumen);
+              const ok = await enviarPresupuestoAN8N({ ...resumen, datosCompletos });
+              if (ok) {
+                setGuardadoOk(true);
+                setTimeout(() => setGuardadoOk(false), 2500);
+              }
+            }}
             style={btn("#fff", NAVY, HAIR)}
           >
             <Save size={14} /> Guardar en base de datos
@@ -768,11 +788,16 @@ function PlantillaFiscalYLaboral({ label, modeloId }) {
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           <button
-            onClick={() => {
-  guardarRegistro({ modelo: label, nombre: cliente.nombre || "Cliente sin nombre", empresa: contrato.representacion, cif: contrato.cif, total, oficina: cliente.oficina });
-  setGuardadoOk(true);
-  setTimeout(() => setGuardadoOk(false), 2500);
-}}
+            onClick={async () => {
+              const resumen = { modelo: label, nombre: cliente.nombre || "Cliente sin nombre", empresa: contrato.representacion, cif: contrato.cif, total, oficina: cliente.oficina };
+              const datosCompletos = { cliente, contrato, servExtra2, servExtra3, precioLaboral, precioFiscalContable, cuotaEmpresa, precioNomina, lineasExtra, nombreFirmante, deudor };
+              guardarRegistro(resumen);
+              const ok = await enviarPresupuestoAN8N({ ...resumen, datosCompletos });
+              if (ok) {
+                setGuardadoOk(true);
+                setTimeout(() => setGuardadoOk(false), 2500);
+              }
+            }}
             style={btn("#fff", NAVY, HAIR)}
           >
             <Save size={14} /> Guardar en base de datos
@@ -1248,11 +1273,16 @@ function PlantillaSociedadLaboral({ label, modeloId }) {
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           <button
-            onClick={() => {
-  guardarRegistro({ modelo: label, nombre: cliente.nombre || "Cliente sin nombre", empresa: contrato.representacion, cif: contrato.cif, total, oficina: cliente.oficina });
-  setGuardadoOk(true);
-  setTimeout(() => setGuardadoOk(false), 2500);
-}}
+            onClick={async () => {
+              const resumen = { modelo: label, nombre: cliente.nombre || "Cliente sin nombre", empresa: contrato.representacion, cif: contrato.cif, total, oficina: cliente.oficina };
+              const datosCompletos = { cliente, contrato, servExtra, cuotaEmpresa, precioNomina, lineasExtra, nombreFirmante, deudor };
+              guardarRegistro(resumen);
+              const ok = await enviarPresupuestoAN8N({ ...resumen, datosCompletos });
+              if (ok) {
+                setGuardadoOk(true);
+                setTimeout(() => setGuardadoOk(false), 2500);
+              }
+            }}
             style={btn("#fff", NAVY, HAIR)}
           >
             <Save size={14} /> Guardar en base de datos
