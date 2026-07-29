@@ -162,6 +162,12 @@ const MODELOS = [
 function SuiteLasautt() {
   const [vista, setVista] = useState("autonomo-sin");
   const modelo = MODELOS.find((m) => m.id === vista);
+  const [datosRecuperados, setDatosRecuperados] = useState(null);
+
+  function abrirPresupuestoGuardado(modeloId, datos) {
+    setDatosRecuperados(datos);
+    setVista(modeloId);
+  }
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", backgroundColor: PAPER, fontFamily: "'Inter', ui-sans-serif, system-ui, sans-serif" }}>
@@ -208,24 +214,24 @@ function SuiteLasautt() {
 
       {/* CONTENIDO PRINCIPAL */}
       <div style={{ flex: 1, minWidth: 0 }}>
-        {renderVista(vista, modelo?.label)}
+        {renderVista(vista, modelo?.label, datosRecuperados, () => setDatosRecuperados(null), abrirPresupuestoGuardado)}
       </div>
     </div>
   );
 }
 
-function renderVista(vista, label) {
+function renderVista(vista, label, datosRecuperados, limpiarRecuperados, abrirPresupuestoGuardado) {
   switch (vista) {
     case "clientes":
-      return <ClientesScreen />;
+      return <ClientesScreen onAbrirPresupuesto={abrirPresupuestoGuardado} />;
     case "autonomo-sin":
     case "sociedad-sin":
-      return <PlantillaFiscalSimple label={label} modeloId={vista} />;
+      return <PlantillaFiscalSimple label={label} modeloId={vista} datosRecuperados={datosRecuperados} limpiarRecuperados={limpiarRecuperados} />;
     case "autonomo-lab":
     case "sociedad-lab":
-      return <PlantillaFiscalYLaboral label={label} modeloId={vista} />;
+      return <PlantillaFiscalYLaboral label={label} modeloId={vista} datosRecuperados={datosRecuperados} limpiarRecuperados={limpiarRecuperados} />;
     case "sociedad-laboral":
-      return <PlantillaSociedadLaboral label={label} modeloId={vista} />;
+      return <PlantillaSociedadLaboral label={label} modeloId={vista} datosRecuperados={datosRecuperados} limpiarRecuperados={limpiarRecuperados} />;
     default:
       return (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", flexDirection: "column", gap: 10 }}>
@@ -317,10 +323,26 @@ function Clausula({ titulo, children, compact = false }) {
 
 // ---------- Plantilla: Autónomo fiscal sin trabajadores ----------
 
-function PlantillaFiscalSimple({ label, modeloId }) {
+function PlantillaFiscalSimple({ label, modeloId, datosRecuperados, limpiarRecuperados }) {
   const [cliente, setCliente] = useState({ nombre: "", dni: "", direccion: "", cp: "", fecha: todayDMY() }); oficina: "";
   const [generando, setGenerando] = useState(false);
   const [guardadoOk, setGuardadoOk] = useState(false);
+
+  useEffect(() => {
+    if (!datosRecuperados) return;
+    const d = datosRecuperados;
+    if (d.cliente) setCliente(d.cliente);
+    if (d.contrato) setContrato(d.contrato);
+    if (d.serviciosExtra) setServiciosExtra(d.serviciosExtra);
+    if (d.precioServicioFiscal !== undefined) setPrecioServicioFiscal(d.precioServicioFiscal);
+    if (d.descuentoPct !== undefined) setDescuentoPct(d.descuentoPct);
+    if (d.aplicarDescuento !== undefined) setAplicarDescuento(d.aplicarDescuento);
+    if (d.cuotaAlta !== undefined) setCuotaAlta(d.cuotaAlta);
+    if (d.lineasExtra) setLineasExtra(d.lineasExtra);
+    if (d.nombreFirmante !== undefined) setNombreFirmante(d.nombreFirmante);
+    if (d.deudor) setDeudor(d.deudor);
+    limpiarRecuperados();
+  }, [datosRecuperados]);
   const [contrato, setContrato] = useState({ representacion: "", direccionContrato: "", cif: "" });
   const [serviciosExtra, setServiciosExtra] = useState([]);
   const [precioServicioFiscal, setPrecioServicioFiscal] = useState(0);
@@ -353,7 +375,7 @@ function PlantillaFiscalSimple({ label, modeloId }) {
         <div style={{ display: "flex", gap: 8 }}>
           <button
             onClick={async () => {
-              const resumen = { modelo: label, nombre: cliente.nombre || "Cliente sin nombre", empresa: contrato.representacion, cif: contrato.cif, total, oficina: cliente.oficina };
+              const resumen = { modelo: label, modeloId, nombre: cliente.nombre || "Cliente sin nombre", empresa: contrato.representacion, cif: contrato.cif, total, oficina: cliente.oficina };
               const datosCompletos = { cliente, contrato, precioServicioFiscal, descuentoPct, aplicarDescuento, cuotaAlta, lineasExtra, serviciosExtra, nombreFirmante, deudor };
               guardarRegistro(resumen);
               const ok = await enviarPresupuestoAN8N({ ...resumen, datosCompletos });
@@ -774,7 +796,7 @@ function PlantillaFiscalSimple({ label, modeloId }) {
 
 // ---------- Plantilla: Autónomo/Sociedad Fiscal y Laboral (9 páginas) ----------
 
-function PlantillaFiscalYLaboral({ label, modeloId }) {
+function PlantillaFiscalYLaboral({ label, modeloId, datosRecuperados, limpiarRecuperados }) {
   const [cliente, setCliente] = useState({ nombre: "", dni: "", direccion: "", cp: "", oficina: "", fecha: todayDMY() });
   const [generando, setGenerando] = useState(false);
   const [guardadoOk, setGuardadoOk] = useState(false);
@@ -788,6 +810,23 @@ function PlantillaFiscalYLaboral({ label, modeloId }) {
   const [lineasExtra, setLineasExtra] = useState([]);
   const [nombreFirmante, setNombreFirmante] = useState("");
   const [deudor, setDeudor] = useState({ nombre: "", direccion: "", cp: "", iban: "", swift: "", tipoPago: "recurrente" });
+
+  useEffect(() => {
+    if (!datosRecuperados) return;
+    const d = datosRecuperados;
+    if (d.cliente) setCliente(d.cliente);
+    if (d.contrato) setContrato(d.contrato);
+    if (d.servExtra2) setServExtra2(d.servExtra2);
+    if (d.servExtra3) setServExtra3(d.servExtra3);
+    if (d.precioLaboral !== undefined) setPrecioLaboral(d.precioLaboral);
+    if (d.precioFiscalContable !== undefined) setPrecioFiscalContable(d.precioFiscalContable);
+    if (d.cuotaEmpresa !== undefined) setCuotaEmpresa(d.cuotaEmpresa);
+    if (d.precioNomina !== undefined) setPrecioNomina(d.precioNomina);
+    if (d.lineasExtra) setLineasExtra(d.lineasExtra);
+    if (d.nombreFirmante !== undefined) setNombreFirmante(d.nombreFirmante);
+    if (d.deudor) setDeudor(d.deudor);
+    limpiarRecuperados();
+  }, [datosRecuperados]);
 
   const setC = (k, v) => setCliente((c) => ({ ...c, [k]: v }));
   const setK = (k, v) => setContrato((c) => ({ ...c, [k]: v }));
@@ -808,7 +847,7 @@ function PlantillaFiscalYLaboral({ label, modeloId }) {
         <div style={{ display: "flex", gap: 8 }}>
           <button
             onClick={async () => {
-              const resumen = { modelo: label, nombre: cliente.nombre || "Cliente sin nombre", empresa: contrato.representacion, cif: contrato.cif, total, oficina: cliente.oficina };
+              const resumen = { modelo: label, modeloId, nombre: cliente.nombre || "Cliente sin nombre", empresa: contrato.representacion, cif: contrato.cif, total, oficina: cliente.oficina };
               const datosCompletos = { cliente, contrato, servExtra2, servExtra3, precioLaboral, precioFiscalContable, cuotaEmpresa, precioNomina, lineasExtra, nombreFirmante, deudor };
               guardarRegistro(resumen);
               const ok = await enviarPresupuestoAN8N({ ...resumen, datosCompletos });
@@ -1262,7 +1301,7 @@ function PlantillaFiscalYLaboral({ label, modeloId }) {
 
 // ---------- Plantilla: Sociedad Laboral (8 páginas, solo servicio laboral) ----------
 
-function PlantillaSociedadLaboral({ label, modeloId }) {
+function PlantillaSociedadLaboral({ label, modeloId, datosRecuperados, limpiarRecuperados }) {
   const [cliente, setCliente] = useState({ nombre: "", dni: "", direccion: "", cp: "", oficina: "", fecha: todayDMY() });
   const [generando, setGenerando] = useState(false);
   const [guardadoOk, setGuardadoOk] = useState(false);
@@ -1273,6 +1312,20 @@ function PlantillaSociedadLaboral({ label, modeloId }) {
   const [lineasExtra, setLineasExtra] = useState([]);
   const [nombreFirmante, setNombreFirmante] = useState("");
   const [deudor, setDeudor] = useState({ nombre: "", direccion: "", cp: "", iban: "", swift: "", tipoPago: "recurrente" });
+
+  useEffect(() => {
+    if (!datosRecuperados) return;
+    const d = datosRecuperados;
+    if (d.cliente) setCliente(d.cliente);
+    if (d.contrato) setContrato(d.contrato);
+    if (d.servExtra) setServExtra(d.servExtra);
+    if (d.cuotaEmpresa !== undefined) setCuotaEmpresa(d.cuotaEmpresa);
+    if (d.precioNomina !== undefined) setPrecioNomina(d.precioNomina);
+    if (d.lineasExtra) setLineasExtra(d.lineasExtra);
+    if (d.nombreFirmante !== undefined) setNombreFirmante(d.nombreFirmante);
+    if (d.deudor) setDeudor(d.deudor);
+    limpiarRecuperados();
+  }, [datosRecuperados]);
 
   const setC = (k, v) => setCliente((c) => ({ ...c, [k]: v }));
   const setK = (k, v) => setContrato((c) => ({ ...c, [k]: v }));
@@ -1293,7 +1346,7 @@ function PlantillaSociedadLaboral({ label, modeloId }) {
         <div style={{ display: "flex", gap: 8 }}>
           <button
             onClick={async () => {
-              const resumen = { modelo: label, nombre: cliente.nombre || "Cliente sin nombre", empresa: contrato.representacion, cif: contrato.cif, total, oficina: cliente.oficina };
+              const resumen = { modelo: label, modeloId, nombre: cliente.nombre || "Cliente sin nombre", empresa: contrato.representacion, cif: contrato.cif, total, oficina: cliente.oficina };
               const datosCompletos = { cliente, contrato, servExtra, cuotaEmpresa, precioNomina, lineasExtra, nombreFirmante, deudor };
               guardarRegistro(resumen);
               const ok = await enviarPresupuestoAN8N({ ...resumen, datosCompletos });
@@ -1694,7 +1747,7 @@ En el supuesto de que se determinará la nulidad de cualquiera de los presentes 
 
 // ---------- Base de datos de clientes ----------
 
-function ClientesScreen() {
+function ClientesScreen({ onAbrirPresupuesto }) {
   const [registros, setRegistros] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [busqueda, setBusqueda] = useState("");
@@ -1796,6 +1849,12 @@ const listaGrupos = Object.values(grupos).filter((g) => {
                         </div>
                         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
                           <span style={{ fontSize: 13, fontWeight: 700, color: NAVY }}>{eur(Number(r.total) || 0)}</span>
+                          <button
+                            onClick={() => onAbrirPresupuesto(r.modelo_id, r.datos_completos)}
+                            style={{ ...btn("#fff", NAVY, HAIR), padding: "5px 10px", fontSize: 11.5 }}
+                          >
+                            Recuperar
+                          </button>
                           <button onClick={() => eliminar(r.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#C0362C" }}>
                             <Trash2 size={14} />
                           </button>
