@@ -106,12 +106,58 @@ async function enviarPresupuestoAN8N(datos) {
   }
 }
 
-async function consultarPresupuestosN8N() {
+async function loginN8N(usuario, clave) {
+  const url = "https://n8n-n8n.vhtza8.easypanel.host/webhook/login";
+  try {
+    const respuesta = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ usuario, clave }),
+    });
+    const datos = await respuesta.json().catch(() => null);
+    const sesion = Array.isArray(datos) ? datos[0] : datos;
+
+    if (!respuesta.ok || !sesion || !sesion.token) {
+      return { ok: false, error: (sesion && sesion.error) || "Usuario o contraseña incorrectos" };
+    }
+    return { ok: true, sesion };
+  } catch (error) {
+    return { ok: false, error: "No se pudo conectar con el servidor" };
+  }
+}
+
+const SESION_KEY = "lasautt_sesion";
+
+function guardarSesion(sesion) {
+  try {
+    window.localStorage?.setItem(SESION_KEY, JSON.stringify(sesion));
+  } catch {}
+}
+function leerSesion() {
+  try {
+    const raw = window.localStorage?.getItem(SESION_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+function borrarSesion() {
+  try {
+    window.localStorage?.removeItem(SESION_KEY);
+  } catch {}
+}
+
+async function consultarPresupuestosN8N(token) {
   const url = "https://n8n-n8n.vhtza8.easypanel.host/webhook/consultar-presupuestos";
   try {
-    const respuesta = await fetch(url);
+    const respuesta = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token }),
+    });
     if (!respuesta.ok) return [];
-    return await respuesta.json();
+    const datos = await respuesta.json();
+    return Array.isArray(datos) ? datos : [];
   } catch (error) {
     console.error("Error al consultar presupuestos:", error);
     return [];
@@ -159,7 +205,86 @@ const MODELOS = [
   { id: "sociedad-laboral", label: "Sociedad laboral", icon: Landmark, disponible: true },
 ];
 
-function SuiteLasautt() {
+function LoginScreen({ onLoginOk }) {
+  const [usuario, setUsuario] = useState("");
+  const [clave, setClave] = useState("");
+  const [error, setError] = useState("");
+  const [cargando, setCargando] = useState(false);
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    if (!usuario || !clave) return;
+    setError("");
+    setCargando(true);
+    const resultado = await loginN8N(usuario, clave);
+    setCargando(false);
+    if (resultado.ok) {
+      guardarSesion(resultado.sesion);
+      onLoginOk(resultado.sesion);
+    } else {
+      setError(resultado.error);
+    }
+  }
+
+  return (
+    <div style={{ minHeight: "100vh", backgroundColor: PAPER, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Inter', ui-sans-serif, system-ui, sans-serif" }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');`}</style>
+      <form onSubmit={handleSubmit} style={{ backgroundColor: "#fff", border: `1px solid ${HAIR}`, borderRadius: 14, padding: 36, width: 340, boxShadow: "0 12px 32px rgba(0,37,61,0.08)" }}>
+        <div style={{ width: 40, height: 40, borderRadius: 8, backgroundColor: RED, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 18 }}>
+          <FileText size={19} color="#fff" />
+        </div>
+        <div style={{ fontSize: 17, fontWeight: 700, color: NAVY, marginBottom: 4 }}>Acceso al tarificador</div>
+        <div style={{ fontSize: 12.5, color: MUTE, marginBottom: 22 }}>Introduce tu usuario y contraseña</div>
+
+        <label style={{ fontSize: 11.5, fontWeight: 600, color: STEEL, marginBottom: 5, display: "block" }}>Usuario</label>
+        <input
+          value={usuario}
+          onChange={(e) => setUsuario(e.target.value)}
+          style={{ width: "100%", fontSize: 13, padding: "9px 10px", borderRadius: 8, border: `1px solid ${HAIR}`, marginBottom: 14 }}
+          autoFocus
+        />
+
+        <label style={{ fontSize: 11.5, fontWeight: 600, color: STEEL, marginBottom: 5, display: "block" }}>Contraseña</label>
+        <input
+          type="password"
+          value={clave}
+          onChange={(e) => setClave(e.target.value)}
+          style={{ width: "100%", fontSize: 13, padding: "9px 10px", borderRadius: 8, border: `1px solid ${HAIR}`, marginBottom: 14 }}
+        />
+
+        {error && (
+          <div style={{ fontSize: 12, color: "#C0362C", backgroundColor: "#FBEAEA", padding: "8px 10px", borderRadius: 8, marginBottom: 14 }}>
+            {error}
+          </div>
+        )}
+
+        <button
+          type="submit"
+          disabled={cargando}
+          style={{
+            width: "100%", padding: "10px 0", borderRadius: 8, border: "none",
+            backgroundColor: GREEN, color: "#fff", fontSize: 13.5, fontWeight: 600,
+            cursor: cargando ? "wait" : "pointer", opacity: cargando ? 0.7 : 1,
+          }}
+        >
+          {cargando ? "Accediendo..." : "Entrar"}
+        </button>
+      </form>
+    </div>
+  );
+}
+
+function AppRaiz() {
+  const [sesion, setSesion] = useState(() => leerSesion());
+
+  if (!sesion) {
+    return <LoginScreen onLoginOk={(s) => setSesion(s)} />;
+  }
+
+  return <SuiteLasautt sesion={sesion} onLogout={() => { borrarSesion(); setSesion(null); }} />;
+}
+
+function SuiteLasautt({ sesion, onLogout }) {
   const [vista, setVista] = useState("autonomo-sin");
   const modelo = MODELOS.find((m) => m.id === vista);
   const [datosRecuperados, setDatosRecuperados] = useState(null);
@@ -213,17 +338,27 @@ function SuiteLasautt() {
       </div>
 
       {/* CONTENIDO PRINCIPAL */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        {renderVista(vista, modelo?.label, datosRecuperados, () => setDatosRecuperados(null), abrirPresupuestoGuardado)}
+      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
+        <div className="no-print" style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 12, padding: "8px 20px", backgroundColor: "#fff", borderBottom: `1px solid ${HAIR}` }}>
+          <span style={{ fontSize: 12, color: STEEL }}>
+            Sesión: <b>{sesion.nombre_usuario}</b> ({sesion.rol})
+          </span>
+          <button onClick={onLogout} style={{ fontSize: 12, color: "#C0362C", background: "none", border: "none", cursor: "pointer", fontWeight: 600 }}>
+            Cerrar sesión
+          </button>
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {renderVista(vista, modelo?.label, datosRecuperados, () => setDatosRecuperados(null), abrirPresupuestoGuardado, sesion)}
+        </div>
       </div>
     </div>
   );
 }
 
-function renderVista(vista, label, datosRecuperados, limpiarRecuperados, abrirPresupuestoGuardado) {
+function renderVista(vista, label, datosRecuperados, limpiarRecuperados, abrirPresupuestoGuardado, sesion) {
   switch (vista) {
     case "clientes":
-      return <ClientesScreen onAbrirPresupuesto={abrirPresupuestoGuardado} />;
+      return <ClientesScreen onAbrirPresupuesto={abrirPresupuestoGuardado} sesion={sesion} />;
     case "autonomo-sin":
     case "sociedad-sin":
       return <PlantillaFiscalSimple label={label} modeloId={vista} datosRecuperados={datosRecuperados} limpiarRecuperados={limpiarRecuperados} />;
@@ -1747,7 +1882,7 @@ En el supuesto de que se determinará la nulidad de cualquiera de los presentes 
 
 // ---------- Base de datos de clientes ----------
 
-function ClientesScreen({ onAbrirPresupuesto }) {
+function ClientesScreen({ onAbrirPresupuesto, sesion }) {
   const [registros, setRegistros] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [busqueda, setBusqueda] = useState("");
@@ -1755,8 +1890,8 @@ function ClientesScreen({ onAbrirPresupuesto }) {
   const [filtroOficina, setFiltroOficina] = useState("");
 
   useEffect(() => {
-    consultarPresupuestosN8N().then((datos) => {
-      setRegistros(datos);
+    consultarPresupuestosN8N(sesion?.token).then((datos) => {
+      setRegistros(Array.isArray(datos) ? datos : []);
       setCargando(false);
     });
   }, []);
@@ -1878,7 +2013,7 @@ const listaGrupos = Object.values(grupos).filter((g) => {
       try {
         var out = Babel.transform(src, { presets: [["react", { runtime: "classic" }]] }).code;
         var s = document.createElement("script");
-        s.text = out + "\nvar root = ReactDOM.createRoot(document.getElementById('root'));\nroot.render(React.createElement(SuiteLasautt));";
+        s.text = out + "\nvar root = ReactDOM.createRoot(document.getElementById('root'));\nroot.render(React.createElement(AppRaiz));";
         document.body.appendChild(s);
       } catch (e) {
         document.getElementById("root").innerHTML =
