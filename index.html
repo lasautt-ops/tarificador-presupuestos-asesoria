@@ -147,6 +147,23 @@ function borrarSesion() {
   } catch {}
 }
 
+async function misOficinasN8N(token) {
+  const url = "https://n8n-n8n.vhtza8.easypanel.host/webhook/mis-oficinas";
+  try {
+    const respuesta = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token }),
+    });
+    if (!respuesta.ok) return [];
+    const datos = await respuesta.json();
+    return Array.isArray(datos) ? datos : [];
+  } catch (error) {
+    console.error("Error al consultar oficinas:", error);
+    return [];
+  }
+}
+
 async function consultarPresupuestosN8N(token) {
   const url = "https://n8n-n8n.vhtza8.easypanel.host/webhook/consultar-presupuestos";
   try {
@@ -361,12 +378,12 @@ function renderVista(vista, label, datosRecuperados, limpiarRecuperados, abrirPr
       return <ClientesScreen onAbrirPresupuesto={abrirPresupuestoGuardado} sesion={sesion} />;
     case "autonomo-sin":
     case "sociedad-sin":
-      return <PlantillaFiscalSimple label={label} modeloId={vista} datosRecuperados={datosRecuperados} limpiarRecuperados={limpiarRecuperados} />;
+      return <PlantillaFiscalSimple label={label} modeloId={vista} datosRecuperados={datosRecuperados} limpiarRecuperados={limpiarRecuperados} sesion={sesion} />;
     case "autonomo-lab":
     case "sociedad-lab":
-      return <PlantillaFiscalYLaboral label={label} modeloId={vista} datosRecuperados={datosRecuperados} limpiarRecuperados={limpiarRecuperados} />;
+      return <PlantillaFiscalYLaboral label={label} modeloId={vista} datosRecuperados={datosRecuperados} limpiarRecuperados={limpiarRecuperados} sesion={sesion} />;
     case "sociedad-laboral":
-      return <PlantillaSociedadLaboral label={label} modeloId={vista} datosRecuperados={datosRecuperados} limpiarRecuperados={limpiarRecuperados} />;
+      return <PlantillaSociedadLaboral label={label} modeloId={vista} datosRecuperados={datosRecuperados} limpiarRecuperados={limpiarRecuperados} sesion={sesion} />;
     default:
       return (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", flexDirection: "column", gap: 10 }}>
@@ -458,8 +475,14 @@ function Clausula({ titulo, children, compact = false }) {
 
 // ---------- Plantilla: Autónomo fiscal sin trabajadores ----------
 
-function PlantillaFiscalSimple({ label, modeloId, datosRecuperados, limpiarRecuperados }) {
-  const [cliente, setCliente] = useState({ nombre: "", dni: "", direccion: "", cp: "", fecha: todayDMY() }); oficina: "";
+function PlantillaFiscalSimple({ label, modeloId, datosRecuperados, limpiarRecuperados, sesion }) {
+  const [cliente, setCliente] = useState({ nombre: "", dni: "", direccion: "", cp: "", oficina: "", fecha: todayDMY() });
+  const [oficinasDisponibles, setOficinasDisponibles] = useState([]);
+
+  useEffect(() => {
+    if (!sesion?.token) return;
+    misOficinasN8N(sesion.token).then(setOficinasDisponibles);
+  }, [sesion]);
   const [generando, setGenerando] = useState(false);
   const [guardadoOk, setGuardadoOk] = useState(false);
 
@@ -510,7 +533,7 @@ function PlantillaFiscalSimple({ label, modeloId, datosRecuperados, limpiarRecup
         <div style={{ display: "flex", gap: 8 }}>
           <button
             onClick={async () => {
-              const resumen = { modelo: label, modeloId, nombre: cliente.nombre || "Cliente sin nombre", empresa: contrato.representacion, cif: contrato.cif, total, oficina: cliente.oficina };
+              const resumen = { modelo: label, modeloId, nombre: cliente.nombre || "Cliente sin nombre", empresa: contrato.representacion, cif: contrato.cif, total, oficina: cliente.oficina, creadoPor: sesion?.nombre_usuario };
               const datosCompletos = { cliente, contrato, precioServicioFiscal, descuentoPct, aplicarDescuento, cuotaAlta, lineasExtra, serviciosExtra, nombreFirmante, deudor };
               guardarRegistro(resumen);
               const ok = await enviarPresupuestoAN8N({ ...resumen, datosCompletos });
@@ -560,7 +583,19 @@ function PlantillaFiscalSimple({ label, modeloId, datosRecuperados, limpiarRecup
               <Campo label="Dirección" value={cliente.direccion} onChange={(v) => setC("direccion", v)} />
               <Campo label="C.P." value={cliente.cp} onChange={(v) => setC("cp", v)} />
               <Campo label="Fecha" value={cliente.fecha} onChange={(v) => setC("fecha", v)} />
-              <Campo label="Oficina" value={cliente.oficina} onChange={(v) => setC("oficina", v)} />
+              <div>
+                <label style={labelStyle}>Oficina</label>
+                <select
+                  style={inputStyle}
+                  value={cliente.oficina}
+                  onChange={(e) => setC("oficina", e.target.value)}
+                >
+                  <option value="">Selecciona una oficina</option>
+                  {oficinasDisponibles.map((o) => (
+                    <option key={o.id} value={o.nombre}>{o.nombre}</option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
 
@@ -931,8 +966,14 @@ function PlantillaFiscalSimple({ label, modeloId, datosRecuperados, limpiarRecup
 
 // ---------- Plantilla: Autónomo/Sociedad Fiscal y Laboral (9 páginas) ----------
 
-function PlantillaFiscalYLaboral({ label, modeloId, datosRecuperados, limpiarRecuperados }) {
+function PlantillaFiscalYLaboral({ label, modeloId, datosRecuperados, limpiarRecuperados, sesion }) {
   const [cliente, setCliente] = useState({ nombre: "", dni: "", direccion: "", cp: "", oficina: "", fecha: todayDMY() });
+  const [oficinasDisponibles, setOficinasDisponibles] = useState([]);
+
+  useEffect(() => {
+    if (!sesion?.token) return;
+    misOficinasN8N(sesion.token).then(setOficinasDisponibles);
+  }, [sesion]);
   const [generando, setGenerando] = useState(false);
   const [guardadoOk, setGuardadoOk] = useState(false);
   const [contrato, setContrato] = useState({ representacion: "", direccionContrato: "", cif: "" });
@@ -982,7 +1023,7 @@ function PlantillaFiscalYLaboral({ label, modeloId, datosRecuperados, limpiarRec
         <div style={{ display: "flex", gap: 8 }}>
           <button
             onClick={async () => {
-              const resumen = { modelo: label, modeloId, nombre: cliente.nombre || "Cliente sin nombre", empresa: contrato.representacion, cif: contrato.cif, total, oficina: cliente.oficina };
+              const resumen = { modelo: label, modeloId, nombre: cliente.nombre || "Cliente sin nombre", empresa: contrato.representacion, cif: contrato.cif, total, oficina: cliente.oficina, creadoPor: sesion?.nombre_usuario };
               const datosCompletos = { cliente, contrato, servExtra2, servExtra3, precioLaboral, precioFiscalContable, cuotaEmpresa, precioNomina, lineasExtra, nombreFirmante, deudor };
               guardarRegistro(resumen);
               const ok = await enviarPresupuestoAN8N({ ...resumen, datosCompletos });
@@ -1031,7 +1072,19 @@ function PlantillaFiscalYLaboral({ label, modeloId, datosRecuperados, limpiarRec
               <Campo label="Dirección" value={cliente.direccion} onChange={(v) => setC("direccion", v)} />
               <Campo label="C.P." value={cliente.cp} onChange={(v) => setC("cp", v)} />
               <Campo label="Fecha" value={cliente.fecha} onChange={(v) => setC("fecha", v)} />
-              <Campo label="Oficina" value={cliente.oficina} onChange={(v) => setC("oficina", v)} />
+              <div>
+                <label style={labelStyle}>Oficina</label>
+                <select
+                  style={inputStyle}
+                  value={cliente.oficina}
+                  onChange={(e) => setC("oficina", e.target.value)}
+                >
+                  <option value="">Selecciona una oficina</option>
+                  {oficinasDisponibles.map((o) => (
+                    <option key={o.id} value={o.nombre}>{o.nombre}</option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
 
@@ -1436,8 +1489,14 @@ function PlantillaFiscalYLaboral({ label, modeloId, datosRecuperados, limpiarRec
 
 // ---------- Plantilla: Sociedad Laboral (8 páginas, solo servicio laboral) ----------
 
-function PlantillaSociedadLaboral({ label, modeloId, datosRecuperados, limpiarRecuperados }) {
+function PlantillaSociedadLaboral({ label, modeloId, datosRecuperados, limpiarRecuperados, sesion }) {
   const [cliente, setCliente] = useState({ nombre: "", dni: "", direccion: "", cp: "", oficina: "", fecha: todayDMY() });
+  const [oficinasDisponibles, setOficinasDisponibles] = useState([]);
+
+  useEffect(() => {
+    if (!sesion?.token) return;
+    misOficinasN8N(sesion.token).then(setOficinasDisponibles);
+  }, [sesion]);
   const [generando, setGenerando] = useState(false);
   const [guardadoOk, setGuardadoOk] = useState(false);
   const [contrato, setContrato] = useState({ representacion: "", direccionContrato: "", cif: "" });
@@ -1481,7 +1540,7 @@ function PlantillaSociedadLaboral({ label, modeloId, datosRecuperados, limpiarRe
         <div style={{ display: "flex", gap: 8 }}>
           <button
             onClick={async () => {
-              const resumen = { modelo: label, modeloId, nombre: cliente.nombre || "Cliente sin nombre", empresa: contrato.representacion, cif: contrato.cif, total, oficina: cliente.oficina };
+              const resumen = { modelo: label, modeloId, nombre: cliente.nombre || "Cliente sin nombre", empresa: contrato.representacion, cif: contrato.cif, total, oficina: cliente.oficina, creadoPor: sesion?.nombre_usuario };
               const datosCompletos = { cliente, contrato, servExtra, cuotaEmpresa, precioNomina, lineasExtra, nombreFirmante, deudor };
               guardarRegistro(resumen);
               const ok = await enviarPresupuestoAN8N({ ...resumen, datosCompletos });
@@ -1530,7 +1589,19 @@ function PlantillaSociedadLaboral({ label, modeloId, datosRecuperados, limpiarRe
               <Campo label="Dirección" value={cliente.direccion} onChange={(v) => setC("direccion", v)} />
               <Campo label="C.P." value={cliente.cp} onChange={(v) => setC("cp", v)} />
               <Campo label="Fecha" value={cliente.fecha} onChange={(v) => setC("fecha", v)} />
-              <Campo label="Oficina" value={cliente.oficina} onChange={(v) => setC("oficina", v)} />
+              <div>
+                <label style={labelStyle}>Oficina</label>
+                <select
+                  style={inputStyle}
+                  value={cliente.oficina}
+                  onChange={(e) => setC("oficina", e.target.value)}
+                >
+                  <option value="">Selecciona una oficina</option>
+                  {oficinasDisponibles.map((o) => (
+                    <option key={o.id} value={o.nombre}>{o.nombre}</option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
 
