@@ -10,6 +10,7 @@
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
   <script src="https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>
     html,
     body {
@@ -1953,6 +1954,22 @@ En el supuesto de que se determinará la nulidad de cualquiera de los presentes 
 
 // ---------- Base de datos de clientes ----------
 
+function exportarExcel(registros) {
+  const filas = registros.map((r) => ({
+    "Nombre": r.nombre || "",
+    "CIF": r.cif || "",
+    "Oficina": r.oficina || "",
+    "Fecha": formatFecha(r.fecha),
+    "Modelo de presupuesto": r.modelo || "",
+    "Total (€)": Number(r.total) || 0,
+  }));
+  const hoja = XLSX.utils.json_to_sheet(filas);
+  const libro = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(libro, hoja, "Presupuestos");
+  const fechaArchivo = todayDMY().replace(/\//g, "-");
+  XLSX.writeFile(libro, `presupuestos_${fechaArchivo}.xlsx`);
+}
+
 function ClientesScreen({ onAbrirPresupuesto, sesion }) {
   const [registros, setRegistros] = useState([]);
   const [cargando, setCargando] = useState(true);
@@ -1996,6 +2013,13 @@ const listaGrupos = Object.values(grupos).filter((g) => {
             {listaGrupos.length} cliente{listaGrupos.length !== 1 ? "s" : ""} &middot; {registros.length} presupuesto{registros.length !== 1 ? "s" : ""} guardado{registros.length !== 1 ? "s" : ""} &middot; {eur(totalGeneral)} en total
           </div>
         </div>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+          <button
+            onClick={() => exportarExcel(listaGrupos.flatMap((g) => g.registros))}
+            style={btn(GREEN, "#fff")}
+          >
+            <FileText size={14} /> Exportar a Excel
+          </button>
 <div style={{ minWidth: 190 }}>
           <select
             value={filtroOficina}
@@ -2007,6 +2031,7 @@ const listaGrupos = Object.values(grupos).filter((g) => {
               <option key={of} value={of}>{of}</option>
             ))}
           </select>
+        </div>
         </div>
       </div>
 
