@@ -240,6 +240,7 @@ const MODELOS = [
   { id: "sociedad-laboral", label: "Sociedad laboral", icon: Landmark, disponible: true },
   { id: "zm-datos", label: "ZM Protección de Datos", icon: Shield, disponible: true },
   { id: "encomienda-alsago", label: "Contrato de Encomienda ALSAGO", icon: GraduationCap, disponible: true },
+  { id: "presupuesto-alsago", label: "Presupuesto Formación ALSAGO", icon: FileText, disponible: true },
 ];
 
 function LoginScreen({ onLoginOk }) {
@@ -414,7 +415,18 @@ function renderVista(vista, label, datosRecuperados, limpiarRecuperados, abrirPr
         </div>
       );
     case "encomienda-alsago":
-  return <PlantillaEncomiendaAlsago label={label} modeloId={vista} datosRecuperados={datosRecuperados} limpiarRecuperados={limpiarRecuperados} sesion={sesion} />;  
+  return <PlantillaEncomiendaAlsago label={label} modeloId={vista} datosRecuperados={datosRecuperados} limpiarRecuperados={limpiarRecuperados} sesion={sesion} />;
+  
+    case "presupuesto-alsago":
+  return (
+    <PlantillaPresupuestoAlsago
+      label={label}
+      modeloId={vista}
+      datosRecuperados={datosRecuperados}
+      limpiarRecuperados={limpiarRecuperados}
+      sesion={sesion}
+    />
+  );    
   }
 }
 
@@ -2534,6 +2546,74 @@ const alsagoFullRow = {
   borderBottom: `1px solid ${ALSAGO_GRIS}`,
 };
 
+// ---------- Layout independiente: Presupuesto Formación ALSAGO ----------
+
+function PaginaPresupuestoAlsago({ children, numero }) {
+  return (
+    <div
+      className="hoja"
+      style={{
+        width: "210mm",
+        minHeight: "297mm",
+        backgroundColor: "#fff",
+        display: "flex",
+        flexDirection: "column",
+        position: "relative",
+        border: `1px solid ${HAIR}`,
+        boxShadow: "0 1px 3px rgba(0,0,0,0.08), 0 12px 32px rgba(0,0,0,0.06)",
+        marginBottom: 24,
+        overflow: "hidden",
+        fontFamily: "Arial, sans-serif",
+      }}
+    >
+      <img
+        src={ALSAGO_LOGO}
+        alt="Formación Profesional ALSAGO"
+        style={{
+          position: "absolute",
+          top: 10,
+          right: 18,
+          width: 115,
+          height: "auto",
+          objectFit: "contain",
+        }}
+      />
+
+      <div
+        style={{
+          flex: 1,
+          padding: "30mm 14mm 10mm 18mm",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        {children}
+
+        <div
+          style={{
+            marginTop: "auto",
+            paddingTop: 8,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-end",
+            fontSize: 9,
+            color: ALSAGO_GRIS,
+          }}
+        >
+          <span>Página {numero} de 3</span>
+
+          <span>
+            <b style={{ color: ALSAGO_AZUL }}>
+              DOCUMENTACIÓN
+            </b>
+            {" | Presupuesto Formación"}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const alsagoLegalText = {
   fontSize: 8.65,
   color: "#222",
@@ -3423,6 +3503,1224 @@ function PlantillaEncomiendaAlsago({
 
           </PaginaAlsago>
 
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------- Plantilla: Presupuesto Formación ALSAGO ----------
+
+function PlantillaPresupuestoAlsago({
+  label,
+  modeloId,
+  datosRecuperados,
+  limpiarRecuperados,
+  sesion,
+}) {
+  const [datos, setDatos] = useState({
+    empresa: "",
+    cliente: "",
+    fecha: "",
+    oficina: "",
+    objetivos: [""],
+    contenidos: [""],
+    lineas: [
+      {
+        id: uid(),
+        denominacion: "",
+        alumnos: "",
+        precioUnitario: "",
+      },
+    ],
+  });
+
+  const [oficinasDisponibles, setOficinasDisponibles] = useState([]);
+  const [guardadoOk, setGuardadoOk] = useState(false);
+  const [generando, setGenerando] = useState(false);
+
+  useEffect(() => {
+    if (!sesion?.token) return;
+
+    misOficinasN8N(sesion.token).then(
+      setOficinasDisponibles
+    );
+  }, [sesion]);
+
+  useEffect(() => {
+    if (!datosRecuperados) return;
+
+    const recuperados =
+      datosRecuperados.presupuestoAlsago ||
+      datosRecuperados;
+
+    if (recuperados) {
+      setDatos((prev) => ({
+        ...prev,
+        ...recuperados,
+      }));
+    }
+
+    limpiarRecuperados();
+  }, [datosRecuperados]);
+
+  const setD = (campo, valor) => {
+    setDatos((prev) => ({
+      ...prev,
+      [campo]: valor,
+    }));
+  };
+
+  function añadirObjetivo() {
+    setDatos((prev) => ({
+      ...prev,
+      objetivos: [...prev.objetivos, ""],
+    }));
+  }
+
+  function cambiarObjetivo(index, valor) {
+    setDatos((prev) => ({
+      ...prev,
+      objetivos: prev.objetivos.map((item, i) =>
+        i === index ? valor : item
+      ),
+    }));
+  }
+
+  function eliminarObjetivo(index) {
+    setDatos((prev) => ({
+      ...prev,
+      objetivos:
+        prev.objetivos.length > 1
+          ? prev.objetivos.filter(
+              (_, i) => i !== index
+            )
+          : [""],
+    }));
+  }
+
+  function añadirContenido() {
+    setDatos((prev) => ({
+      ...prev,
+      contenidos: [...prev.contenidos, ""],
+    }));
+  }
+
+  function cambiarContenido(index, valor) {
+    setDatos((prev) => ({
+      ...prev,
+      contenidos: prev.contenidos.map(
+        (item, i) =>
+          i === index ? valor : item
+      ),
+    }));
+  }
+
+  function eliminarContenido(index) {
+    setDatos((prev) => ({
+      ...prev,
+      contenidos:
+        prev.contenidos.length > 1
+          ? prev.contenidos.filter(
+              (_, i) => i !== index
+            )
+          : [""],
+    }));
+  }
+
+  function añadirLinea() {
+    setDatos((prev) => ({
+      ...prev,
+      lineas: [
+        ...prev.lineas,
+        {
+          id: uid(),
+          denominacion: "",
+          alumnos: "",
+          precioUnitario: "",
+        },
+      ],
+    }));
+  }
+
+  function cambiarLinea(id, campo, valor) {
+    setDatos((prev) => ({
+      ...prev,
+      lineas: prev.lineas.map((linea) =>
+        linea.id === id
+          ? {
+              ...linea,
+              [campo]: valor,
+            }
+          : linea
+      ),
+    }));
+  }
+
+  function eliminarLinea(id) {
+    setDatos((prev) => ({
+      ...prev,
+      lineas:
+        prev.lineas.length > 1
+          ? prev.lineas.filter(
+              (linea) => linea.id !== id
+            )
+          : prev.lineas,
+    }));
+  }
+
+  function numero(valor) {
+    const n = parseFloat(
+      String(valor ?? "").replace(",", ".")
+    );
+
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  function importeLinea(linea) {
+    return (
+      numero(linea.alumnos) *
+      numero(linea.precioUnitario)
+    );
+  }
+
+  const importeTotal = datos.lineas.reduce(
+    (total, linea) =>
+      total + importeLinea(linea),
+    0
+  );
+
+  const iva = importeTotal * 0.21;
+  const total = importeTotal + iva;
+
+  async function guardar() {
+    const resumen = {
+      modelo: label,
+      modeloId,
+      nombre:
+        datos.cliente ||
+        datos.empresa ||
+        "Cliente sin nombre",
+      empresa: datos.empresa || "",
+      cif: "",
+      total,
+      oficina: datos.oficina || "",
+      creadoPor: sesion?.nombre_usuario,
+    };
+
+    const datosCompletos = {
+      presupuestoAlsago: datos,
+    };
+
+    guardarRegistro(resumen);
+
+    const ok =
+      await enviarPresupuestoAN8N({
+        ...resumen,
+        datosCompletos,
+      });
+
+    if (ok) {
+      setGuardadoOk(true);
+
+      setTimeout(
+        () => setGuardadoOk(false),
+        2500
+      );
+    }
+  }
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100vh",
+      }}
+    >
+      {/* CABECERA */}
+      <div
+        className="no-print"
+        style={{
+          backgroundColor: "#fff",
+          borderBottom: `1px solid ${HAIR}`,
+          padding: "14px 24px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        <div>
+          <div
+            style={{
+              fontSize: 15.5,
+              fontWeight: 700,
+              color: NAVY,
+            }}
+          >
+            {label}
+          </div>
+
+          <div
+            style={{
+              fontSize: 11.5,
+              color: MUTE,
+            }}
+          >
+            Rellena los datos a la izquierda —
+            el presupuesto se genera a la derecha
+          </div>
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            gap: 8,
+            alignItems: "center",
+          }}
+        >
+          {guardadoOk && (
+            <span
+              style={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: GREEN,
+              }}
+            >
+              ✓ Guardado correctamente
+            </span>
+          )}
+
+          <button
+            onClick={guardar}
+            style={btn("#fff", NAVY, HAIR)}
+          >
+            <Save size={14} />
+            Guardar
+          </button>
+
+          <button
+            onClick={async () => {
+              setGenerando(true);
+
+              try {
+                await generarPDF(
+                  `presupuesto-alsago-${(
+                    datos.cliente ||
+                    datos.empresa ||
+                    "cliente"
+                  ).replace(/\s+/g, "_")}`
+                );
+              } finally {
+                setGenerando(false);
+              }
+            }}
+            disabled={generando}
+            style={btn(GREEN, "#fff")}
+          >
+            <Printer size={14} />
+            {generando
+              ? "Generando..."
+              : "Descargar PDF"}
+          </button>
+        </div>
+      </div>
+
+      {/* CUERPO */}
+      <div
+        id="main-layout"
+        style={{
+          flex: 1,
+          display: "grid",
+          gridTemplateColumns: "380px 1fr",
+          minHeight: 0,
+        }}
+      >
+        {/* PANEL FORMULARIO */}
+        <div
+          className="no-print"
+          style={{
+            overflowY: "auto",
+            padding: 20,
+            borderRight: `1px solid ${HAIR}`,
+          }}
+        >
+          {/* DATOS GENERALES */}
+          <div style={cardStyle}>
+            <div style={sectionTitleStyle}>
+              Datos generales
+            </div>
+
+            <Campo
+              label="Empresa"
+              value={datos.empresa}
+              onChange={(v) =>
+                setD("empresa", v)
+              }
+              placeholder="Nombre de la empresa"
+            />
+
+            <div style={{ height: 10 }} />
+
+            <Campo
+              label="Cliente"
+              value={datos.cliente}
+              onChange={(v) =>
+                setD("cliente", v)
+              }
+              placeholder="Nombre del cliente"
+            />
+
+            <div style={{ height: 10 }} />
+
+            <Campo
+              label="Fecha"
+              value={datos.fecha}
+              onChange={(v) =>
+                setD("fecha", v)
+              }
+              type="date"
+            />
+
+            <div style={{ height: 10 }} />
+
+            <label style={labelStyle}>
+              Oficina
+            </label>
+
+            <select
+              value={datos.oficina}
+              onChange={(e) =>
+                setD(
+                  "oficina",
+                  e.target.value
+                )
+              }
+              style={inputStyle}
+            >
+              <option value="">
+                Selecciona una oficina
+              </option>
+
+              {oficinasDisponibles.map(
+                (oficina) => (
+                  <option
+                    key={
+                      oficina.id ||
+                      oficina.nombre
+                    }
+                    value={oficina.nombre}
+                  >
+                    {oficina.nombre}
+                  </option>
+                )
+              )}
+            </select>
+          </div>
+
+          {/* OBJETIVOS */}
+          <div style={cardStyle}>
+            <div style={sectionTitleStyle}>
+              Objetivos
+            </div>
+
+            {datos.objetivos.map(
+              (objetivo, index) => (
+                <div
+                  key={index}
+                  style={{
+                    display: "flex",
+                    gap: 6,
+                    marginBottom: 8,
+                  }}
+                >
+                  <input
+                    value={objetivo}
+                    onChange={(e) =>
+                      cambiarObjetivo(
+                        index,
+                        e.target.value
+                      )
+                    }
+                    placeholder={`Objetivo ${
+                      index + 1
+                    }`}
+                    style={inputStyle}
+                  />
+
+                  {datos.objetivos.length >
+                    1 && (
+                    <button
+                      onClick={() =>
+                        eliminarObjetivo(
+                          index
+                        )
+                      }
+                      style={{
+                        ...btn(
+                          "#fff",
+                          "#C0362C",
+                          "#E5B7B7"
+                        ),
+                        padding: "4px 9px",
+                      }}
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+              )
+            )}
+
+            <button
+              onClick={añadirObjetivo}
+              style={btn(
+                ALSAGO_AZUL,
+                "#fff"
+              )}
+            >
+              <Plus size={14} />
+              Añadir objetivo
+            </button>
+          </div>
+
+          {/* CONTENIDOS */}
+          <div style={cardStyle}>
+            <div style={sectionTitleStyle}>
+              Contenidos
+            </div>
+
+            {datos.contenidos.map(
+              (contenido, index) => (
+                <div
+                  key={index}
+                  style={{
+                    display: "flex",
+                    gap: 6,
+                    marginBottom: 8,
+                  }}
+                >
+                  <textarea
+                    value={contenido}
+                    onChange={(e) =>
+                      cambiarContenido(
+                        index,
+                        e.target.value
+                      )
+                    }
+                    placeholder={`Contenido ${
+                      index + 1
+                    }`}
+                    style={{
+                      ...inputStyle,
+                      minHeight: 55,
+                      resize: "vertical",
+                    }}
+                  />
+
+                  {datos.contenidos.length >
+                    1 && (
+                    <button
+                      onClick={() =>
+                        eliminarContenido(
+                          index
+                        )
+                      }
+                      style={{
+                        ...btn(
+                          "#fff",
+                          "#C0362C",
+                          "#E5B7B7"
+                        ),
+                        padding: "4px 9px",
+                      }}
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+              )
+            )}
+
+            <button
+              onClick={añadirContenido}
+              style={btn(
+                ALSAGO_AZUL,
+                "#fff"
+              )}
+            >
+              <Plus size={14} />
+              Añadir contenido
+            </button>
+          </div>
+
+          {/* PRESUPUESTO */}
+          <div style={cardStyle}>
+            <div style={sectionTitleStyle}>
+              Presupuesto
+            </div>
+
+            {datos.lineas.map(
+              (linea, index) => (
+                <div
+                  key={linea.id}
+                  style={{
+                    border: `1px solid ${HAIR}`,
+                    borderRadius: 10,
+                    padding: 12,
+                    marginBottom: 10,
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 700,
+                      color: NAVY,
+                      marginBottom: 8,
+                    }}
+                  >
+                    Línea {index + 1}
+                  </div>
+
+                  <Campo
+                    label="Denominación"
+                    value={
+                      linea.denominacion
+                    }
+                    onChange={(v) =>
+                      cambiarLinea(
+                        linea.id,
+                        "denominacion",
+                        v
+                      )
+                    }
+                  />
+
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns:
+                        "1fr 1fr",
+                      gap: 8,
+                      marginTop: 8,
+                    }}
+                  >
+                    <Campo
+                      label="Alumnos"
+                      value={linea.alumnos}
+                      onChange={(v) =>
+                        cambiarLinea(
+                          linea.id,
+                          "alumnos",
+                          v
+                        )
+                      }
+                      type="number"
+                    />
+
+                    <Campo
+                      label="Precio unitario"
+                      value={
+                        linea.precioUnitario
+                      }
+                      onChange={(v) =>
+                        cambiarLinea(
+                          linea.id,
+                          "precioUnitario",
+                          v
+                        )
+                      }
+                      type="number"
+                    />
+                  </div>
+
+                  <div
+                    style={{
+                      marginTop: 8,
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: NAVY,
+                    }}
+                  >
+                    Importe:{" "}
+                    {eur(
+                      importeLinea(
+                        linea
+                      )
+                    )}
+                  </div>
+
+                  {datos.lineas.length >
+                    1 && (
+                    <button
+                      onClick={() =>
+                        eliminarLinea(
+                          linea.id
+                        )
+                      }
+                      style={{
+                        ...btn(
+                          "#fff",
+                          "#C0362C",
+                          "#E5B7B7"
+                        ),
+                        marginTop: 8,
+                      }}
+                    >
+                      <Trash2 size={13} />
+                      Eliminar línea
+                    </button>
+                  )}
+                </div>
+              )
+            )}
+
+            <button
+              onClick={añadirLinea}
+              style={btn(
+                ALSAGO_AZUL,
+                "#fff"
+              )}
+            >
+              <Plus size={14} />
+              Añadir línea
+            </button>
+          </div>
+        </div>
+
+        {/* PREVISUALIZACIÓN */}
+        <div
+          id="right-scroll"
+          style={{
+            overflowY: "auto",
+            padding: 24,
+            backgroundColor: "#F4F5F7",
+          }}
+        >
+          {/* ================= PÁGINA 1 ================= */}
+          <PaginaPresupuestoAlsago numero={1}>
+            <div
+              style={{
+                fontSize: 10.5,
+                lineHeight: 1.7,
+                color: "#222",
+              }}
+            >
+              <p>
+                Buenos días, adjunto presupuesto
+                detallado para la impartición de
+                la acción formativa solicitada a
+                ALSAGO FORMACION por la empresa{" "}
+                <b>
+                  {datos.empresa ||
+                    ".........................................................."}
+                </b>
+              </p>
+
+              <p style={{ marginTop: 28 }}>
+                La acción formativa a desarrollar
+                se basa en contenidos y parámetros
+                expuestos por la empresa solicitante,
+                los cuales se engloban en un área
+                concreta de formación referente a{" "}
+                <b>Habilidades personales</b>.
+              </p>
+
+              <p style={{ marginTop: 28 }}>
+                Las denominaciones de las acciones,
+                duración y contenido personalizado
+                sería el siguiente:
+              </p>
+
+              <ul>
+                <li>Nombre curso</li>
+                <li>
+                  Modalidad: número de horas
+                </li>
+              </ul>
+
+              <div
+                style={{
+                  marginTop: 24,
+                  fontWeight: 700,
+                }}
+              >
+                Objetivos:
+              </div>
+
+              <div
+                style={{
+                  marginTop: 8,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 5,
+                }}
+              >
+                {datos.objetivos
+                  .filter(
+                    (objetivo) =>
+                      objetivo.trim()
+                  )
+                  .map(
+                    (objetivo, index) => (
+                      <div key={index}>
+                        • {objetivo}
+                      </div>
+                    )
+                  )}
+              </div>
+
+              <div
+                style={{
+                  marginTop: 24,
+                  fontWeight: 700,
+                }}
+              >
+                Contenidos:
+              </div>
+
+              <div
+                style={{
+                  marginTop: 8,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 5,
+                }}
+              >
+                {datos.contenidos
+                  .filter(
+                    (contenido) =>
+                      contenido.trim()
+                  )
+                  .map(
+                    (contenido, index) => (
+                      <div key={index}>
+                        • {contenido}
+                      </div>
+                    )
+                  )}
+              </div>
+            </div>
+          </PaginaPresupuestoAlsago>
+
+          {/* ================= PÁGINA 2 ================= */}
+          <PaginaPresupuestoAlsago numero={2}>
+            <div
+              style={{
+                fontSize: 24,
+                marginBottom: 22,
+              }}
+            >
+              PRESUPUESTO
+            </div>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns:
+                  "1fr 1fr",
+                backgroundColor: "#F0F0F0",
+                padding: 12,
+                marginBottom: 22,
+              }}
+            >
+              <div>
+                <b>Cliente:</b>{" "}
+                {datos.cliente}
+              </div>
+
+              <div>
+                <b>Fecha:</b>{" "}
+                {formatFecha(
+                  datos.fecha
+                )}
+              </div>
+            </div>
+
+            <div
+              style={{
+                textAlign: "center",
+                fontSize: 11,
+                marginBottom: 18,
+              }}
+            >
+              Descripción del presupuesto:
+            </div>
+
+            <table
+              style={{
+                width: "100%",
+                borderCollapse:
+                  "collapse",
+                fontSize: 9.5,
+              }}
+            >
+              <thead>
+                <tr>
+                  <th
+                    style={{
+                      border:
+                        "1px solid #333",
+                      backgroundColor:
+                        "#D0D0D0",
+                      padding: 7,
+                    }}
+                  >
+                    Denominación
+                  </th>
+
+                  <th
+                    style={{
+                      border:
+                        "1px solid #333",
+                      backgroundColor:
+                        "#D0D0D0",
+                      padding: 7,
+                    }}
+                  >
+                    Alumnos
+                  </th>
+
+                  <th
+                    style={{
+                      border:
+                        "1px solid #333",
+                      backgroundColor:
+                        "#D0D0D0",
+                      padding: 7,
+                    }}
+                  >
+                    Precio unitario
+                  </th>
+
+                  <th
+                    style={{
+                      border:
+                        "1px solid #333",
+                      backgroundColor:
+                        "#D0D0D0",
+                      padding: 7,
+                    }}
+                  >
+                    Importe
+                  </th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {datos.lineas.map(
+                  (linea) => (
+                    <tr key={linea.id}>
+                      <td
+                        style={{
+                          border:
+                            "1px solid #333",
+                          padding: 7,
+                        }}
+                      >
+                        {linea.denominacion}
+                      </td>
+
+                      <td
+                        style={{
+                          border:
+                            "1px solid #333",
+                          padding: 7,
+                          textAlign:
+                            "center",
+                        }}
+                      >
+                        {linea.alumnos}
+                      </td>
+
+                      <td
+                        style={{
+                          border:
+                            "1px solid #333",
+                          padding: 7,
+                          textAlign:
+                            "right",
+                        }}
+                      >
+                        {linea.precioUnitario
+                          ? eur(
+                              numero(
+                                linea.precioUnitario
+                              )
+                            )
+                          : ""}
+                      </td>
+
+                      <td
+                        style={{
+                          border:
+                            "1px solid #333",
+                          padding: 7,
+                          textAlign:
+                            "right",
+                        }}
+                      >
+                        {eur(
+                          importeLinea(
+                            linea
+                          )
+                        )}
+                      </td>
+                    </tr>
+                  )
+                )}
+              </tbody>
+            </table>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns:
+                  "1.2fr 1fr",
+                gap: 22,
+                marginTop: 30,
+              }}
+            >
+              <div
+                style={{
+                  border:
+                    "1px solid #333",
+                  padding: 10,
+                  fontSize: 9,
+                  lineHeight: 1.5,
+                }}
+              >
+                <b>Más información:</b>
+                <br />
+                CREDITO DISPONIBLE:
+                <br />
+                FORMACIÓN:100% BONIFICABLE
+                <br />
+                EL IVA ES UN IMPUESTO Y NO ES
+                BONIFICABLE
+                <br />
+                FECHA INICIO:
+                <br />
+                FECHA FIN:
+              </div>
+
+              <div
+                style={{
+                  border:
+                    "1px solid #333",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent:
+                      "space-between",
+                    padding: 9,
+                    borderBottom:
+                      "1px solid #333",
+                  }}
+                >
+                  <b>Importe</b>
+                  <span>
+                    {eur(
+                      importeTotal
+                    )}
+                  </span>
+                </div>
+
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent:
+                      "space-between",
+                    padding: 9,
+                    borderBottom:
+                      "1px solid #333",
+                  }}
+                >
+                  <b>+ IVA de 21 %</b>
+                  <span>
+                    {eur(iva)}
+                  </span>
+                </div>
+
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent:
+                      "space-between",
+                    padding: 10,
+                    backgroundColor:
+                      "#D0D0D0",
+                    fontSize: 13,
+                  }}
+                >
+                  <b>TOTAL</b>
+                  <b>
+                    {eur(total)}
+                  </b>
+                </div>
+              </div>
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent:
+                  "space-between",
+                marginTop: 28,
+                fontSize: 10,
+              }}
+            >
+              <span>
+                Gracias por su confianza.
+              </span>
+
+              <span>
+                Atentamente,
+              </span>
+            </div>
+          </PaginaPresupuestoAlsago>
+
+          {/* ================= PÁGINA 3 ================= */}
+          <PaginaPresupuestoAlsago numero={3}>
+            <div
+              style={{
+                fontSize: 9.5,
+                lineHeight: 1.45,
+                color: "#222",
+                textAlign: "justify",
+              }}
+            >
+              <div
+                style={{
+                  textAlign: "center",
+                  fontWeight: 700,
+                  fontSize: 12,
+                  marginBottom: 18,
+                }}
+              >
+                INFORMACIÓN PARA EL TRATAMIENTO
+                DE DATOS PERSONALES
+              </div>
+
+              <p>
+                <b>
+                  ALSAGO FORMACION SL
+                </b>{" "}
+                es el Responsable del tratamiento
+                de los datos personales del Interesado
+                y le informa de que estos datos se
+                tratarán de conformidad con lo dispuesto
+                en el Reglamento (UE) 2016/679, de 27
+                de abril (RGPD), y la Ley Orgánica
+                3/2018, de 5 de diciembre (LOPDGDD),
+                por lo que se le facilita la siguiente
+                información del tratamiento:
+              </p>
+
+              <p>
+                <b>
+                  Fines y legitimación del tratamiento:
+                </b>
+              </p>
+
+              <p>
+                1. Por ser necesario para la relación
+                contractual que supone nuestra relación
+                comercial (art. 6.1.b RGPD).
+              </p>
+
+              <p>
+                2. Para el cumplimiento de nuestras
+                obligaciones legales (art.6.1.c RGPD)
+              </p>
+
+              <p>
+                3. Para el envío de comunicaciones
+                comerciales:
+              </p>
+
+              <p>
+                a. De productos o servicios similares
+                a los ya contratados para nuestro interés
+                legítimo (art. 6.1.f RGPD)
+              </p>
+
+              <p>
+                b. De productos o servicios distintos
+                a los ya contratados previa solicitud
+                de su consentimiento (art. 6.1.a RGPD)
+              </p>
+
+              <p>
+                <b>
+                  Criterios de conservación de los datos:
+                </b>{" "}
+                se conservarán durante no más tiempo
+                del necesario para mantener el fin del
+                tratamiento o mientras existan
+                prescripciones legales que dictaminen
+                su custodia y cuando ya no sea necesario
+                para ello, se suprimirán con medidas de
+                seguridad adecuadas para garantizar la
+                anonimización de los datos o la
+                destrucción total de los mismos.
+              </p>
+
+              <p>
+                <b>
+                  Comunicación de los datos:
+                </b>{" "}
+                no se comunicarán los datos a terceros,
+                salvo obligación legal.
+              </p>
+
+              <p>
+                <b>
+                  Derechos que asisten al Interesado:
+                </b>
+              </p>
+
+              <p>
+                • Derecho a retirar el consentimiento
+                en cualquier momento, en el caso del
+                tratamiento basado en el mismo.
+              </p>
+
+              <p>
+                • Derecho de acceso, rectificación,
+                portabilidad y supresión de sus datos
+                y de limitación u oposición a su
+                tratamiento.
+              </p>
+
+              <p>
+                • Derecho a presentar una reclamación
+                ante la Autoridad de control
+                (www.aepd.es) si considera que el
+                tratamiento no se ajusta a la normativa
+                vigente.
+              </p>
+
+              <p>
+                <b>
+                  Datos de contacto para ejercer sus
+                  derechos:
+                </b>
+              </p>
+
+              <p>
+                ALSAGO FORMACION SL. AVD. A RUA, 2
+                PLANTA BAJA - 06200 ALMENDRALEJO
+                (Badajoz).
+              </p>
+
+              <p>
+                E-mail: administracion@fpalsago.es
+              </p>
+            </div>
+          </PaginaPresupuestoAlsago>
         </div>
       </div>
     </div>
