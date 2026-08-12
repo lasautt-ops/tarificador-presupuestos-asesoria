@@ -231,16 +231,55 @@ function eliminarRegistro(id) {
   return registros;
 }
 
+const LOGO_ZM_MENU = "./images/logo-zm-menu.png";
+const LOGO_CE_MENU = "./images/logo-ce-menu.png";
+const LOGO_ALSAGO_MENU = "./images/logo-alsago-menu.png";
+
 const MODELOS = [
   { id: "clientes", label: "Base de datos de clientes", icon: Database, disponible: true },
-  { id: "autonomo-sin", label: "Autónomo fiscal sin trabajadores", icon: Briefcase, disponible: true },
-  { id: "autonomo-lab", label: "Autónomo fiscal y laboral", icon: Users, disponible: true },
-  { id: "sociedad-sin", label: "Sociedad fiscal sin trabajadores", icon: Building2, disponible: true },
-  { id: "sociedad-lab", label: "Sociedad fiscal y laboral", icon: ClipboardList, disponible: true },
-  { id: "sociedad-laboral", label: "Sociedad laboral", icon: Landmark, disponible: true },
-  { id: "zm-datos", label: "ZM Protección de Datos", icon: Shield, disponible: true },
-  { id: "encomienda-alsago", label: "Contrato de Encomienda ALSAGO", icon: GraduationCap, disponible: true },
-  { id: "presupuesto-alsago", label: "Presupuesto Formación ALSAGO", icon: FileText, disponible: true },
+  { id: "autonomo-sin", label: "Autónomo fiscal sin trabajadores", logo: LOGO_CE_MENU, disponible: true },
+  { id: "autonomo-lab", label: "Autónomo fiscal y laboral", logo: LOGO_CE_MENU, disponible: true },
+  { id: "sociedad-sin", label: "Sociedad fiscal sin trabajadores", logo: LOGO_CE_MENU, disponible: true },
+  { id: "sociedad-lab", label: "Sociedad fiscal y laboral", logo: LOGO_CE_MENU, disponible: true },
+  { id: "sociedad-laboral", label: "Sociedad laboral", logo: LOGO_CE_MENU, disponible: true },
+  { 
+  id: "zm-datos",
+  label: "ZM Protección de Datos",
+  icon: Shield,
+  logo: LOGO_ZM_MENU,
+  disponible: true
+},
+  { id: "encomienda-alsago", label: "Contrato de Encomienda ALSAGO", logo: LOGO_ALSAGO_MENU, disponible: true },
+  { id: "presupuesto-alsago", label: "Presupuesto Formación ALSAGO", logo: LOGO_ALSAGO_MENU, disponible: true },
+];
+
+const GRUPOS_MENU = [
+  {
+    id: "clientes-abono",
+    label: "Clientes Abono",
+    modelos: [
+      "autonomo-sin",
+      "autonomo-lab",
+      "sociedad-sin",
+      "sociedad-lab",
+      "sociedad-laboral",
+    ],
+  },
+  {
+    id: "zm-proteccion",
+    label: "ZM Protección de Datos",
+    modelos: [
+      "zm-datos",
+    ],
+  },
+  {
+    id: "alsago-formacion",
+    label: "Alsago Formación",
+    modelos: [
+      "encomienda-alsago",
+      "presupuesto-alsago",
+    ],
+  },
 ];
 
 function LoginScreen({ onLoginOk }) {
@@ -268,9 +307,29 @@ function LoginScreen({ onLoginOk }) {
     <div style={{ minHeight: "100vh", backgroundColor: PAPER, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Inter', ui-sans-serif, system-ui, sans-serif" }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');`}</style>
       <form onSubmit={handleSubmit} style={{ backgroundColor: "#fff", border: `1px solid ${HAIR}`, borderRadius: 14, padding: 36, width: 340, boxShadow: "0 12px 32px rgba(0,37,61,0.08)" }}>
-        <div style={{ width: 40, height: 40, borderRadius: 8, backgroundColor: RED, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 18 }}>
-          <FileText size={19} color="#fff" />
-        </div>
+        <div
+  style={{
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    backgroundColor: RED,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 18,
+    overflow: "hidden",
+  }}
+>
+  <img
+    src="./images/LOGO-CE-MENU.png"
+    alt="CE Consulting"
+    style={{
+      width: 34,
+      height: 34,
+      objectFit: "contain",
+    }}
+  />
+</div>
         <div style={{ fontSize: 17, fontWeight: 700, color: NAVY, marginBottom: 4 }}>Acceso al tarificador</div>
         <div style={{ fontSize: 12.5, color: MUTE, marginBottom: 22 }}>Introduce tu usuario y contraseña</div>
 
@@ -301,7 +360,7 @@ function LoginScreen({ onLoginOk }) {
           disabled={cargando}
           style={{
             width: "100%", padding: "10px 0", borderRadius: 8, border: "none",
-            backgroundColor: GREEN, color: "#fff", fontSize: 13.5, fontWeight: 600,
+            backgroundColor: NAVY, color: "#fff", fontSize: 13.5, fontWeight: 600,
             cursor: cargando ? "wait" : "pointer", opacity: cargando ? 0.7 : 1,
           }}
         >
@@ -324,6 +383,12 @@ function AppRaiz() {
 
 function SuiteLasautt({ sesion, onLogout }) {
   const [vista, setVista] = useState("autonomo-sin");
+  const [gruposAbiertos, setGruposAbiertos] =
+  useState({
+    "clientes-abono": true,
+    "zm-proteccion": true,
+    "alsago-formacion": true,
+  });
   const modelo = MODELOS.find((m) => m.id === vista);
   const [datosRecuperados, setDatosRecuperados] = useState(null);
 
@@ -348,32 +413,236 @@ function SuiteLasautt({ sesion, onLogout }) {
         }
       `}</style>
 
-      {/* SIDEBAR DE ICONOS */}
-      <div className="no-print" style={{ width: 76, backgroundColor: NAVY, display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 20, gap: 6, flexShrink: 0 }}>
-        <div style={{ width: 34, height: 34, borderRadius: 8, backgroundColor: RED, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 14 }}>
-          <FileText size={17} color="#fff" />
-        </div>
-        {MODELOS.map((m) => {
-          const Icon = m.icon;
-          const activo = vista === m.id;
-          return (
-            <button
-              key={m.id}
-              title={m.label}
-              onClick={() => setVista(m.id)}
-              style={{
-                width: 52, height: 52, borderRadius: 10, border: "none", cursor: "pointer",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                backgroundColor: activo ? RED : "transparent",
-                color: activo ? "#fff" : "#8FA3BE",
-                position: "relative",
-              }}
-            >
-              <Icon size={20} />
-            </button>
-          );
-        })}
+      {/* SIDEBAR DE MODELOS AGRUPADOS */}
+<div
+  className="no-print"
+  style={{
+    width: 245,
+    backgroundColor: NAVY,
+    display: "flex",
+    flexDirection: "column",
+    padding: "18px 10px",
+    gap: 8,
+    flexShrink: 0,
+    overflowY: "auto",
+  }}
+>
+  {/* LOGO / CABECERA */}
+<div
+  style={{
+    height: 42,
+    borderRadius: 8,
+    backgroundColor: RED,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 8,
+  }}
+>
+  <img
+    src="./images/logo-ce-consulting-largo.png"
+    alt="CE Consulting"
+    style={{
+      height: 34,
+      width: "auto",
+      objectFit: "contain",
+    }}
+  />
+</div>
+
+  {/* BASE DE DATOS */}
+  {(() => {
+    const m = MODELOS.find(
+      (item) => item.id === "clientes"
+    );
+
+    if (!m) return null;
+
+    const Icon = m.icon;
+    const activo = vista === m.id;
+
+    return (
+      <button
+        title={m.label}
+        onClick={() => setVista(m.id)}
+        style={{
+          width: "100%",
+          minHeight: 44,
+          borderRadius: 9,
+          border: "none",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          padding: "8px 10px",
+          backgroundColor: activo
+            ? RED
+            : "transparent",
+          color: activo
+            ? "#fff"
+            : "#D8E0EC",
+          textAlign: "left",
+        }}
+      >
+        <Icon size={18} />
+        <span
+          style={{
+            fontSize: 12.5,
+            fontWeight: 600,
+          }}
+        >
+          Base de datos de clientes
+        </span>
+      </button>
+    );
+  })()}
+
+  {/* SEPARADOR */}
+  <div
+    style={{
+      height: 1,
+      backgroundColor: "rgba(255,255,255,0.12)",
+      margin: "4px 4px",
+    }}
+  />
+
+  {/* GRUPOS */}
+  {GRUPOS_MENU.map((grupo) => {
+    const abierto =
+      gruposAbiertos[grupo.id];
+
+    return (
+      <div key={grupo.id}>
+        {/* CABECERA DEL GRUPO */}
+        <button
+          onClick={() =>
+            setGruposAbiertos((prev) => ({
+              ...prev,
+              [grupo.id]: !prev[grupo.id],
+            }))
+          }
+          style={{
+            width: "100%",
+            border: "none",
+            background: "transparent",
+            color: "#8FA3BE",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "9px 8px 7px",
+            textAlign: "left",
+          }}
+        >
+          <span
+            style={{
+              fontSize: 10,
+              fontWeight: 800,
+              letterSpacing: 0.8,
+              textTransform: "uppercase",
+            }}
+          >
+            {grupo.label}
+          </span>
+
+          <ChevronDown
+            size={14}
+            style={{
+              transform: abierto
+                ? "rotate(180deg)"
+                : "none",
+              transition:
+                "transform 0.15s",
+            }}
+          />
+        </button>
+
+        {/* MODELOS DEL GRUPO */}
+        {abierto && (
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 2,
+            }}
+          >
+            {grupo.modelos.map(
+              (modeloId) => {
+                const m =
+                  MODELOS.find(
+                    (item) =>
+                      item.id ===
+                      modeloId
+                  );
+
+                if (!m) return null;
+
+                const Icon = m.icon;
+                const activo =
+                  vista === m.id;
+
+                return (
+                  <button
+                    key={m.id}
+                    title={m.label}
+                    onClick={() =>
+                      setVista(m.id)
+                    }
+                    style={{
+                      width: "100%",
+                      minHeight: 42,
+                      borderRadius: 8,
+                      border: "none",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      padding:
+                        "7px 10px",
+                      backgroundColor:
+                        activo
+                          ? RED
+                          : "transparent",
+                      color: activo
+                        ? "#fff"
+                        : "#D8E0EC",
+                      textAlign:
+                        "left",
+                    }}
+                  >
+                    {m.logo ? (
+  <img
+    src={m.logo}
+    alt=""
+    style={{
+      width: 28,
+      height: 28,
+      objectFit: "contain",
+      display: "block",
+    }}
+  />
+) : (
+  <Icon size={18} />
+)}
+
+                    <span
+                      style={{
+                        fontSize: 11.5,
+                        lineHeight: 1.25,
+                      }}
+                    >
+                      {m.label}
+                    </span>
+                  </button>
+                );
+              }
+            )}
+          </div>
+        )}
       </div>
+    );
+  })}
+</div>
 
       {/* CONTENIDO PRINCIPAL */}
       <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
@@ -2775,10 +3044,10 @@ function PlantillaEncomiendaAlsago({
             }}
             disabled={generando}
             style={{
-              ...btn(ALSAGO_AZUL, "#fff"),
-              opacity: generando ? 0.6 : 1,
-              cursor: generando ? "wait" : "pointer",
-            }}
+  ...btn(GREEN, "#fff"),
+  opacity: generando ? 0.6 : 1,
+  cursor: generando ? "wait" : "pointer",
+}}
           >
             <Printer size={14} />
             {generando ? "Generando PDF..." : "Descargar PDF"}
@@ -4733,6 +5002,7 @@ function ClientesScreen({ onAbrirPresupuesto, sesion }) {
   const [busqueda, setBusqueda] = useState("");
   const [expandido, setExpandido] = useState(null);
   const [filtroOficina, setFiltroOficina] = useState("");
+  const [filtroModelo, setFiltroModelo] = useState("");
 
   useEffect(() => {
     consultarPresupuestosN8N(sesion?.token).then((datos) => {
@@ -4745,21 +5015,85 @@ function ClientesScreen({ onAbrirPresupuesto, sesion }) {
     setRegistros((prev) => prev.filter((r) => r.id !== id));
   }
 
-const grupos = {};
-  registros.forEach((r) => {
-    const key = (r.cif && r.cif.trim()) || (r.empresa && r.empresa.trim()) || r.nombre || "Sin nombre";
-    if (!grupos[key]) grupos[key] = { key, nombre: r.nombre, empresa: r.empresa, cif: r.cif, oficina: r.oficina, registros: [] };
-    grupos[key].registros.push(r);
-  });
+const oficinasDisponibles = [
+  ...new Set(
+    registros
+      .map((r) => r.oficina)
+      .filter(Boolean)
+  ),
+].sort();
 
-  const oficinasDisponibles = [...new Set(registros.map((r) => r.oficina).filter(Boolean))].sort();
+const modelosDisponibles = MODELOS
+  .filter(
+    (m) =>
+      m.id !== "clientes" &&
+      m.disponible !== false
+  )
+  .map((m) => ({
+    id: m.id,
+    label: m.label,
+  }));
+
+const registrosFiltrados = registros.filter((r) => {
+  const modeloRegistro =
+    r.modelo_id ||
+    r.modeloId ||
+    "";
+
+  const pasaOficina =
+    !filtroOficina ||
+    r.oficina === filtroOficina;
+
+  const pasaModelo =
+    !filtroModelo ||
+    modeloRegistro === filtroModelo;
+
+  return pasaOficina && pasaModelo;
+});
+
+const grupos = {};
+
+registrosFiltrados.forEach((r) => {
+  const key =
+    (r.cif && r.cif.trim()) ||
+    (r.empresa && r.empresa.trim()) ||
+    r.nombre ||
+    "Sin nombre";
+
+  if (!grupos[key]) {
+    grupos[key] = {
+      key,
+      nombre: r.nombre,
+      empresa: r.empresa,
+      cif: r.cif,
+      oficina: r.oficina,
+      registros: [],
+    };
+  }
+
+  grupos[key].registros.push(r);
+});
+
 const listaGrupos = Object.values(grupos).filter((g) => {
-    const q = busqueda.trim().toLowerCase();
-    const pasaBusqueda = !q || (g.nombre || "").toLowerCase().includes(q) || (g.empresa || "").toLowerCase().includes(q) || (g.cif || "").toLowerCase().includes(q);
-    const pasaOficina = !filtroOficina || g.oficina === filtroOficina;
-    return pasaBusqueda && pasaOficina;
-  });
-  const totalGeneral = registros.reduce((s, r) => s + (Number(r.total) || 0), 0);
+  const q = busqueda.trim().toLowerCase();
+
+  return (
+    !q ||
+    (g.nombre || "")
+      .toLowerCase()
+      .includes(q) ||
+    (g.empresa || "")
+      .toLowerCase()
+      .includes(q) ||
+    (g.cif || "")
+      .toLowerCase()
+      .includes(q)
+  );
+});
+  const totalGeneral = registrosFiltrados.reduce(
+  (s, r) => s + (Number(r.total) || 0),
+  0
+);
 
   return (
     <div style={{ maxWidth: 1100, margin: "0 auto", padding: "171px 28px", height: "100vh", overflowY: "auto" }}>
@@ -4767,7 +5101,7 @@ const listaGrupos = Object.values(grupos).filter((g) => {
         <div>
           <div style={{ fontSize: 19, fontWeight: 700, color: NAVY }}>Base de datos de clientes</div>
           <div style={{ fontSize: 12.5, color: MUTE, marginTop: 3 }}>
-            {listaGrupos.length} cliente{listaGrupos.length !== 1 ? "s" : ""} &middot; {registros.length} presupuesto{registros.length !== 1 ? "s" : ""} guardado{registros.length !== 1 ? "s" : ""} &middot; {eur(totalGeneral)} en total
+            {listaGrupos.length} cliente{listaGrupos.length !== 1 ? "s" : ""} &middot; {registrosFiltrados.length} presupuesto{registrosFiltrados.length !== 1 ? "s" : ""} guardado{registrosFiltrados.length !== 1 ? "s" : ""} &middot; {eur(totalGeneral)} en total
           </div>
         </div>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
@@ -4777,18 +5111,75 @@ const listaGrupos = Object.values(grupos).filter((g) => {
           >
             <FileText size={14} /> Exportar a Excel
           </button>
-<div style={{ minWidth: 190 }}>
-          <select
-            value={filtroOficina}
-            onChange={(e) => setFiltroOficina(e.target.value)}
-            style={{ width: "100%", fontSize: 13.5, padding: "9px 11px", borderRadius: 8, border: `1px solid ${HAIR}`, backgroundColor: "#fff", outline: "none", color: NAVY }}
-          >
-            <option value="">Todas las oficinas</option>
-            {oficinasDisponibles.map((of) => (
-              <option key={of} value={of}>{of}</option>
-            ))}
-          </select>
-        </div>
+<div
+  style={{
+    display: "flex",
+    gap: 10,
+    flexWrap: "wrap",
+    alignItems: "center",
+  }}
+>
+  <div style={{ minWidth: 190 }}>
+    <select
+      value={filtroOficina}
+      onChange={(e) =>
+        setFiltroOficina(e.target.value)
+      }
+      style={{
+        width: "100%",
+        fontSize: 13.5,
+        padding: "9px 11px",
+        borderRadius: 8,
+        border: `1px solid ${HAIR}`,
+        backgroundColor: "#fff",
+        outline: "none",
+        color: NAVY,
+      }}
+    >
+      <option value="">
+        Todas las oficinas
+      </option>
+
+      {oficinasDisponibles.map((of) => (
+        <option key={of} value={of}>
+          {of}
+        </option>
+      ))}
+    </select>
+  </div>
+
+  <div style={{ minWidth: 230 }}>
+    <select
+      value={filtroModelo}
+      onChange={(e) =>
+        setFiltroModelo(e.target.value)
+      }
+      style={{
+        width: "100%",
+        fontSize: 13.5,
+        padding: "9px 11px",
+        borderRadius: 8,
+        border: `1px solid ${HAIR}`,
+        backgroundColor: "#fff",
+        outline: "none",
+        color: NAVY,
+      }}
+    >
+      <option value="">
+        Todos los presupuestos
+      </option>
+
+      {modelosDisponibles.map((modelo) => (
+        <option
+          key={modelo.id}
+          value={modelo.id}
+        >
+          {modelo.label}
+        </option>
+      ))}
+    </select>
+  </div>
+</div>
         </div>
       </div>
 
