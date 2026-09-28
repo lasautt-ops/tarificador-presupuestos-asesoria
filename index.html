@@ -133,6 +133,21 @@ async function generarPDF(nombreArchivo = "propuesta") {
   pdf.save(`${nombreArchivo}.pdf`);
 }
 
+async function actualizarEstadoPresupuestoN8N(token, id, estado) {
+  const url = "https://n8n-n8n.vhtza8.easypanel.host/webhook/actualizar-estado-presupuesto";
+  try {
+    const r = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token, id, estado }),
+    });
+    const datos = await r.json().catch(() => null);
+    return r.ok && !datos?.error;
+  } catch {
+    return false;
+  }
+}
+
 async function enviarPresupuestoAN8N(datos) {
   const webhookUrl = "https://n8n-n8n.vhtza8.easypanel.host/webhook/guardar-presupuesto";
   try {
@@ -258,6 +273,12 @@ function eliminarRegistro(id) {
 const LOGO_ZM_MENU = "./images/logo-zm-menu.png";
 const LOGO_CE_MENU = "./images/logo-ce-menu.png";
 const LOGO_ALSAGO_MENU = "./images/logo-alsago-menu.png";
+
+const ESTADOS_PRESUPUESTO = [
+  { id: "pendiente", label: "Pendiente", color: "#B58B00", bg: "#FFF6DD" },
+  { id: "aceptado", label: "Aceptado", color: GREEN, bg: "#E7F5EC" },
+  { id: "rechazado", label: "Rechazado", color: "#A3343B", bg: "#FBEAEA" },
+];
 
 const MODELOS = [
   { id: "clientes", label: "Base de datos de clientes", icon: Database, disponible: true },
@@ -529,6 +550,22 @@ function SuiteLasautt({ sesion, onLogout }) {
     );
   })()}
 
+    {sesion.rol === "admin" && (
+    <button
+      title="Historial"
+      onClick={() => setVista("historial")}
+      style={{
+        width: "100%", minHeight: 44, borderRadius: 9, border: "none", cursor: "pointer",
+        display: "flex", alignItems: "center", gap: 10, padding: "8px 10px",
+        backgroundColor: vista === "historial" ? RED : "transparent",
+        color: vista === "historial" ? "#fff" : "#D8E0EC", textAlign: "left",
+      }}
+    >
+      <Database size={18} />
+      <span style={{ fontSize: 12.5, fontWeight: 600 }}>Historial por usuario</span>
+    </button>
+  )}
+
   {/* SEPARADOR */}
   <div
     style={{
@@ -696,6 +733,9 @@ function SuiteLasautt({ sesion, onLogout }) {
 
 function renderVista(vista, label, datosRecuperados, limpiarRecuperados, abrirPresupuestoGuardado, sesion) {
   switch (vista) {
+
+    case "historial":
+    return <HistorialScreen sesion={sesion} />;  
     case "clientes":
       return <ClientesScreen onAbrirPresupuesto={abrirPresupuestoGuardado} sesion={sesion} />;
     case "autonomo-sin":
@@ -5323,12 +5363,72 @@ function PlantillaFichaAvanta({ label, modeloId, datosRecuperados, limpiarRecupe
   );
 }
 
+function HistorialScreen({ sesion }) {
+  const [registros, setRegistros] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [filtroUsuario, setFiltroUsuario] = useState("");
+
+  useEffect(() => {
+    consultarPresupuestosN8N(sesion?.token).then((d) => {
+      setRegistros(Array.isArray(d) ? d : []);
+      setCargando(false);
+    });
+  }, []);
+
+  const usuarios = [...new Set(registros.map((r) => r.creado_por).filter(Boolean))].sort();
+  const lista = registros.filter((r) => !filtroUsuario || r.creado_por === filtroUsuario);
+
+  const th = { textAlign: "left", padding: "10px 12px", fontSize: 11.5, color: STEEL, borderBottom: `1px solid ${HAIR}` };
+  const td = { padding: "10px 12px", fontSize: 12.5, color: NAVY, borderBottom: `1px solid ${HAIR}` };
+
+  return (
+    <div style={{ padding: 24, overflowY: "auto", height: "100vh" }}>
+      <div style={{ fontSize: 17, fontWeight: 700, color: NAVY, marginBottom: 14 }}>Historial de presupuestos por usuario</div>
+      <select
+        value={filtroUsuario}
+        onChange={(e) => setFiltroUsuario(e.target.value)}
+        style={{ fontSize: 13.5, padding: "9px 11px", borderRadius: 8, border: `1px solid ${HAIR}`, marginBottom: 14, minWidth: 220 }}
+      >
+        <option value="">Todos los usuarios</option>
+        {usuarios.map((u) => <option key={u} value={u}>{u}</option>)}
+      </select>
+      {cargando ? (
+        <div style={{ color: MUTE }}>Cargando...</div>
+      ) : (
+        <div style={{ backgroundColor: "#fff", border: `1px solid ${HAIR}`, borderRadius: 14, overflow: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr>
+                <th style={th}>Usuario</th><th style={th}>Fecha</th><th style={th}>Cliente</th>
+                <th style={th}>Modelo</th><th style={th}>Oficina</th><th style={th}>Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {lista.map((r) => (
+                <tr key={r.id}>
+                  <td style={{ ...td, fontWeight: 600 }}>{r.creado_por || "—"}</td>
+                  <td style={td}>{formatFecha(r.fecha)}</td>
+                  <td style={td}>{r.empresa || r.nombre}</td>
+                  <td style={td}>{r.modelo}</td>
+                  <td style={td}>{r.oficina}</td>
+                  <td style={td}>{r.estado}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ClientesScreen({ onAbrirPresupuesto, sesion }) {
   const [registros, setRegistros] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [busqueda, setBusqueda] = useState("");
   const [expandido, setExpandido] = useState(null);
   const [filtroOficina, setFiltroOficina] = useState("");
+  const [filtroEstado, setFiltroEstado] = useState("");
   const [filtroModelo, setFiltroModelo] = useState("");
 
   useEffect(() => {
@@ -5371,11 +5471,13 @@ const registrosFiltrados = registros.filter((r) => {
     !filtroOficina ||
     r.oficina === filtroOficina;
 
+  const pasaEstado = !filtroEstado || r.estado === filtroEstado;
+
   const pasaModelo =
     !filtroModelo ||
     modeloRegistro === filtroModelo;
 
-  return pasaOficina && pasaModelo;
+  return pasaOficina && pasaModelo && pasaEstado;
 });
 
 const grupos = {};
@@ -5506,6 +5608,30 @@ const listaGrupos = Object.values(grupos).filter((g) => {
       ))}
     </select>
   </div>
+
+  
+  <div style={{ minWidth: 170 }}>
+    <select
+      value={filtroEstado}
+      onChange={(e) => setFiltroEstado(e.target.value)}
+      style={{
+        width: "100%",
+        fontSize: 13.5,
+        padding: "9px 11px",
+        borderRadius: 8,
+        border: `1px solid ${HAIR}`,
+        backgroundColor: "#fff",
+        outline: "none",
+        color: NAVY,
+      }}
+    >
+      <option value="">Todos los estados</option>
+      {ESTADOS_PRESUPUESTO.map((es) => (
+        <option key={es.id} value={es.id}>{es.label}</option>
+      ))}
+    </select>
+  </div>
+
 </div>
         </div>
       </div>
@@ -5561,6 +5687,19 @@ const listaGrupos = Object.values(grupos).filter((g) => {
                           >
                             Recuperar
                           </button>
+                          <select
+                            value={r.estado || "pendiente"}
+                            onChange={async (e) => {
+                              const nuevo = e.target.value;
+                              const ok = await actualizarEstadoPresupuestoN8N(sesion.token, r.id, nuevo);
+                              if (ok) setRegistros((prev) => prev.map((x) => (x.id === r.id ? { ...x, estado: nuevo } : x)));
+                            }}
+                            style={{ fontSize: 11, fontWeight: 600, padding: "4px 8px", borderRadius: 6, border: `1px solid ${HAIR}` }}
+                          >
+                            {ESTADOS_PRESUPUESTO.map((es) => (
+                              <option key={es.id} value={es.id}>{es.label}</option>
+                            ))}
+                          </select>
                           <button onClick={() => eliminar(r.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#C0362C" }}>
                             <Trash2 size={14} />
                           </button>
