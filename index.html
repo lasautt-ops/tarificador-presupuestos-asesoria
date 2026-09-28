@@ -436,6 +436,8 @@ function AppRaiz() {
 
 function SuiteLasautt({ sesion, onLogout }) {
   const [vista, setVista] = useState("autonomo-sin");
+  const [menuAbierto, setMenuAbierto] = useState(false);
+  useEffect(() => { setMenuAbierto(false); }, [vista]);
   const [gruposAbiertos, setGruposAbiertos] =
   useState({
     "clientes-abono": true,
@@ -458,6 +460,27 @@ function SuiteLasautt({ sesion, onLogout }) {
         input:focus, textarea:focus { outline: none; border-color: ${RED} !important; box-shadow: 0 0 0 3px rgba(163,52,59,0.12); }
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-thumb { background: ${HAIR}; border-radius: 8px; }
+                .btn-menu, .backdrop-menu { display: none; }
+        #right-scroll { justify-content: flex-start !important; align-items: flex-start !important; }
+        #right-scroll .hoja { margin-left: auto !important; margin-right: auto !important; flex-shrink: 0; }
+        @media (max-width: 1100px) {
+          .btn-menu { display: inline-flex; }
+          .sidebar-app { position: fixed !important; top: 0; bottom: 0; left: 0; z-index: 60; transform: translateX(-100%); transition: transform .2s ease; box-shadow: 0 0 24px rgba(0,0,0,.3); }
+          .sidebar-app.abierto { transform: translateX(0); }
+          .backdrop-menu { display: block; position: fixed; inset: 0; background: rgba(0,37,61,.45); z-index: 55; }
+          div:has(> #main-layout) { height: auto !important; min-height: 100vh; }
+          #main-layout { display: block !important; }
+          #main-layout > div:first-child { overflow: visible !important; border-right: none !important; max-width: 720px; margin: 0 auto; width: 100%; }
+          #right-scroll { height: auto !important; overflow-x: auto !important; }
+        }
+        @media (max-width: 768px) {
+          #right-scroll { position: absolute !important; left: -10000px; top: 0; width: 210mm !important; overflow: visible !important; padding: 0 !important; background-image: none !important; }
+          div:has(> #main-layout) > .no-print:first-child { flex-wrap: wrap; gap: 8px; padding: 10px 14px !important; }
+          .no-print button { min-height: 40px; }
+          input, select, textarea { font-size: 16px !important; }
+          .pantalla-clientes { padding: 16px 14px !important; height: auto !important; }
+          .fila-registro { flex-wrap: wrap; gap: 8px; }
+        }
         @media print {
           .no-print { display: none !important; }
           .hoja { box-shadow: none !important; border: none !important; margin: 0 !important; page-break-after: always; }
@@ -468,7 +491,7 @@ function SuiteLasautt({ sesion, onLogout }) {
 
       {/* SIDEBAR DE MODELOS AGRUPADOS */}
 <div
-  className="no-print"
+  className={"no-print sidebar-app" + (menuAbierto ? " abierto" : "")}
   style={{
     width: 245,
     backgroundColor: NAVY,
@@ -712,10 +735,11 @@ function SuiteLasautt({ sesion, onLogout }) {
     );
   })}
 </div>
-
+      {menuAbierto && <div className="no-print backdrop-menu" onClick={() => setMenuAbierto(false)} />}
       {/* CONTENIDO PRINCIPAL */}
       <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
         <div className="no-print" style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 12, padding: "8px 20px", backgroundColor: "#fff", borderBottom: `1px solid ${HAIR}` }}>
+                    <button className="btn-menu" onClick={() => setMenuAbierto((v) => !v)} style={{ marginRight: "auto", background: "none", border: `1px solid ${HAIR}`, borderRadius: 8, padding: "6px 12px", fontSize: 18, lineHeight: 1, cursor: "pointer", color: NAVY }}>☰</button>
           <span style={{ fontSize: 12, color: STEEL }}>
             Sesión: <b>{sesion.nombre_usuario}</b> ({sesion.rol})
           </span>
@@ -5525,7 +5549,7 @@ const listaGrupos = Object.values(grupos).filter((g) => {
 );
 
   return (
-    <div style={{ maxWidth: 1100, margin: "0 auto", padding: "171px 28px", height: "100vh", overflowY: "auto" }}>
+    <div className="pantalla-clientes" style={{ maxWidth: 1100, margin: "0 auto", padding: "171px 28px", height: "100vh", overflowY: "auto" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 12, paddingTop: 15, paddingBottom: 15 }}>
         <div>
           <div style={{ fontSize: 19, fontWeight: 700, color: NAVY }}>Base de datos de clientes</div>
@@ -5674,7 +5698,7 @@ const listaGrupos = Object.values(grupos).filter((g) => {
                 {abierto && (
                   <div style={{ borderTop: `1px solid ${HAIR}`, padding: "8px 20px 16px" }}>
                     {g.registros.map((r) => (
-                      <div key={r.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 0", borderBottom: `1px solid ${HAIR}` }}>
+                      <div key={r.id} className="fila-registro" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 0", borderBottom: `1px solid ${HAIR}` }}>
                         <div>
                           <div style={{ fontSize: 12.5, fontWeight: 600, color: NAVY }}>{r.modelo}</div>
                           <div style={{ fontSize: 11, color: MUTE, marginTop: 2 }}>{formatFecha(r.fecha)}</div>
