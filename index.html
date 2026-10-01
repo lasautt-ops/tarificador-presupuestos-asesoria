@@ -5497,11 +5497,19 @@ const registrosFiltrados = registros.filter((r) => {
 
   const pasaEstado = !filtroEstado || r.estado === filtroEstado;
 
+  const texto = busqueda.trim().toLowerCase();
+  const pasaBusqueda =
+    !texto ||
+    (r.empresa || "").toLowerCase().includes(texto) ||
+    (r.cif || "").toLowerCase().includes(texto) ||
+    (r.nombre || "").toLowerCase().includes(texto);
+
+
   const pasaModelo =
     !filtroModelo ||
     modeloRegistro === filtroModelo;
 
-  return pasaOficina && pasaModelo && pasaEstado;
+  return pasaOficina && pasaModelo && pasaEstado && pasaBusqueda;
 });
 
 const grupos = {};
@@ -5572,6 +5580,26 @@ const listaGrupos = Object.values(grupos).filter((g) => {
     alignItems: "center",
   }}
 >
+
+    <div style={{ minWidth: 220, flex: 1 }}>
+    <input
+      type="text"
+      value={busqueda}
+      onChange={(e) => setBusqueda(e.target.value)}
+      placeholder="Buscar por empresa, CIF o nombre..."
+      style={{
+        width: "100%",
+        fontSize: 13.5,
+        padding: "9px 11px",
+        borderRadius: 8,
+        border: `1px solid ${HAIR}`,
+        backgroundColor: "#fff",
+        outline: "none",
+        color: NAVY,
+      }}
+    />
+  </div>
+
   <div style={{ minWidth: 190 }}>
     <select
       value={filtroOficina}
