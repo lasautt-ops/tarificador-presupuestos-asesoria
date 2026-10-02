@@ -573,7 +573,7 @@ function SuiteLasautt({ sesion, onLogout }) {
     );
   })()}
 
-    {sesion.rol === "admin" && (
+        {sesion.rol === "admin" && (
     <button
       title="Historial"
       onClick={() => setVista("historial")}
@@ -586,6 +586,22 @@ function SuiteLasautt({ sesion, onLogout }) {
     >
       <Database size={18} />
       <span style={{ fontSize: 12.5, fontWeight: 600 }}>Historial por usuario</span>
+    </button>
+  )}
+
+  {sesion.rol === "admin" && (
+    <button
+      title="Auditoría"
+      onClick={() => setVista("auditoria")}
+      style={{
+        width: "100%", minHeight: 44, borderRadius: 9, border: "none", cursor: "pointer",
+        display: "flex", alignItems: "center", gap: 10, padding: "8px 10px",
+        backgroundColor: vista === "auditoria" ? RED : "transparent",
+        color: vista === "auditoria" ? "#fff" : "#D8E0EC", textAlign: "left",
+      }}
+    >
+      <Database size={18} />
+      <span style={{ fontSize: 12.5, fontWeight: 600 }}>Auditoría</span>
     </button>
   )}
 
@@ -758,6 +774,8 @@ function SuiteLasautt({ sesion, onLogout }) {
 function renderVista(vista, label, datosRecuperados, limpiarRecuperados, abrirPresupuestoGuardado, sesion) {
   switch (vista) {
 
+    case "auditoria":
+      return <AuditoriaScreen sesion={sesion} />;
     case "historial":
     return <HistorialScreen sesion={sesion} />;  
     case "clientes":
@@ -5445,6 +5463,57 @@ function HistorialScreen({ sesion }) {
     </div>
   );
 }
+
+function AuditoriaScreen({ sesion }) {
+  const [registros, setRegistros] = useState([]);
+  const [cargando, setCargando] = useState(true);
+
+  useEffect(() => {
+    fetch("https://n8n-n8n.vhtza8.easypanel.host/webhook/consultar-auditoria", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: sesion?.token }),
+    })
+      .then((r) => r.json())
+      .then((d) => { setRegistros(Array.isArray(d) ? d : []); setCargando(false); })
+      .catch(() => setCargando(false));
+  }, []);
+
+  const th = { textAlign: "left", padding: "10px 12px", fontSize: 11.5, color: STEEL, borderBottom: `1px solid ${HAIR}` };
+  const td = { padding: "10px 12px", fontSize: 12.5, color: NAVY, borderBottom: `1px solid ${HAIR}` };
+
+  return (
+    <div style={{ padding: 24, overflowY: "auto", height: "100vh" }}>
+      <div style={{ fontSize: 17, fontWeight: 700, color: NAVY, marginBottom: 14 }}>Auditoría de cambios de estado</div>
+      {cargando ? (
+        <div style={{ color: MUTE }}>Cargando...</div>
+      ) : (
+        <div style={{ backgroundColor: "#fff", border: `1px solid ${HAIR}`, borderRadius: 14, overflow: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr>
+                <th style={th}>Fecha</th><th style={th}>Cliente</th><th style={th}>Anterior</th>
+                <th style={th}>Nuevo</th><th style={th}>Usuario</th>
+              </tr>
+            </thead>
+            <tbody>
+              {registros.map((r) => (
+                <tr key={r.id}>
+                  <td style={td}>{formatFecha(r.fecha)}</td>
+                  <td style={td}>{r.empresa || r.nombre}</td>
+                  <td style={td}>{r.estado_anterior || "—"}</td>
+                  <td style={{ ...td, fontWeight: 600 }}>{r.estado_nuevo}</td>
+                  <td style={td}>{r.usuario}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 
 function ClientesScreen({ onAbrirPresupuesto, sesion }) {
   const [registros, setRegistros] = useState([]);
