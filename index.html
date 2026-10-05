@@ -5467,6 +5467,7 @@ function HistorialScreen({ sesion }) {
 function AuditoriaScreen({ sesion }) {
   const [registros, setRegistros] = useState([]);
   const [cargando, setCargando] = useState(true);
+  const [filtroUsuario, setFiltroUsuario] = useState("");
 
   useEffect(() => {
     fetch("https://n8n-n8n.vhtza8.easypanel.host/webhook/consultar-auditoria", {
@@ -5479,12 +5480,22 @@ function AuditoriaScreen({ sesion }) {
       .catch(() => setCargando(false));
   }, []);
 
+  const usuarios = [...new Set(registros.map((r) => r.usuario).filter(Boolean))].sort();
+  const lista = registros.filter((r) => !filtroUsuario || r.usuario === filtroUsuario);
   const th = { textAlign: "left", padding: "10px 12px", fontSize: 11.5, color: STEEL, borderBottom: `1px solid ${HAIR}` };
   const td = { padding: "10px 12px", fontSize: 12.5, color: NAVY, borderBottom: `1px solid ${HAIR}` };
 
   return (
     <div style={{ padding: 24, overflowY: "auto", height: "100vh" }}>
       <div style={{ fontSize: 17, fontWeight: 700, color: NAVY, marginBottom: 14 }}>Auditoría de cambios de estado</div>
+            <select
+        value={filtroUsuario}
+        onChange={(e) => setFiltroUsuario(e.target.value)}
+        style={{ fontSize: 13.5, padding: "9px 11px", borderRadius: 8, border: `1px solid ${HAIR}`, marginBottom: 14, minWidth: 220 }}
+      >
+        <option value="">Todos los usuarios</option>
+        {usuarios.map((u) => <option key={u} value={u}>{u}</option>)}
+      </select>
       {cargando ? (
         <div style={{ color: MUTE }}>Cargando...</div>
       ) : (
@@ -5497,7 +5508,7 @@ function AuditoriaScreen({ sesion }) {
               </tr>
             </thead>
             <tbody>
-              {registros.map((r) => (
+                {lista.map((r) => (
                 <tr key={r.id}>
                   <td style={td}>{formatFecha(r.fecha)}</td>
                   <td style={td}>{r.empresa || r.nombre}</td>
