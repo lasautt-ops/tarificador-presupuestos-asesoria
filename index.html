@@ -4276,6 +4276,28 @@ function PlantillaPresupuestoAlsago({
 
             <div style={{ height: 10 }} />
 
+            <Campo 
+              label="Email" 
+              value={datos.email} 
+              onChange={(v) => 
+                setD("email", v)
+              } 
+                placeholder="Email"
+            />
+              
+            <div style={{ height: 10 }} />
+
+            <Campo 
+              label="Teléfono" 
+              value={datos.telefono} 
+              onChange={(v) => 
+                setD("telefono", v)
+              } 
+                laceholder="Telefono"
+            />
+
+            <div style={{ height: 10 }} />
+
             <Campo
               label="Fecha"
               value={datos.fecha}
