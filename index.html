@@ -2,47 +2,47 @@
 <html lang="es">
 
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Cotizador de Presupuestos · CE CONSULTING</title>
-    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-    <script src="https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-    <script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <style>
-        html,
-        body {
-            margin: 0;
-            padding: 0;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cotizador de Presupuestos · CE CONSULTING</title>
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+    }
 
-        .footer-lasautt {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 32px;
-            background: #36404A;
-            color: #DCE2ED;
-            display: flex;
-            align-items: center;
-            padding-left: 115px;
-            font-size: 10px;
-            font-family: Arial, sans-serif;
-            z-index: 9999;
-        }
-    </style>
+    .footer-lasautt {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 32px;
+      background: #36404A;
+      color: #DCE2ED;
+      display: flex;
+      align-items: center;
+      padding-left: 115px;
+      font-size: 10px;
+      font-family: Arial, sans-serif;
+      z-index: 9999;
+    }
+  </style>
 </head>
 
 <body>
-    <div id="root"></div>
+  <div id="root"></div>
 
-    <div class="footer-lasautt">
-        2026 © Lasautt
-    </div>
-    <script type="text/plain" id="app-source">
+  <div class="footer-lasautt">
+    2026 © Lasautt
+  </div>
+  <script type="text/plain" id="app-source">
 const { useState, useEffect } = React;
 
 function Icon({ children, size = 16, color = "currentColor", style, strokeWidth = 2 }) {
@@ -4294,6 +4294,26 @@ function PlantillaPresupuestoAlsago({
 
             <div style={{ height: 10 }} />
 
+            <Campo 
+              label="Email" 
+              value={datos.email} 
+              onChange={(v) => 
+                setD("email", v)
+              } 
+            />
+
+            <div style={{ height: 10 }} />
+
+              <Campo 
+                label="Teléfono" 
+                value={datos.telefono} 
+                onChange={(v) => 
+                  setD("telefono", v)
+              } 
+            />
+
+            <div style={{ height: 10 }} />
+
             <label style={labelStyle}>
               Oficina
             </label>
@@ -5868,22 +5888,22 @@ const listaGrupos = Object.values(grupos).filter((g) => {
   );
 }
 </script>
-    <script>
-        (function () {
-            var src = document.getElementById("app-source").textContent;
-            try {
-                var out = Babel.transform(src, { presets: [["react", { runtime: "classic" }]] }).code;
-                var s = document.createElement("script");
-                s.text = out + "\nvar root = ReactDOM.createRoot(document.getElementById('root'));\nroot.render(React.createElement(AppRaiz));";
-                document.body.appendChild(s);
-            } catch (e) {
-                document.getElementById("root").innerHTML =
-                    "<pre style=\"padding:24px;color:#a32d2d;white-space:pre-wrap;font-family:monospace\">" +
-                    "Error al preparar la demo:\n" + (e && e.message ? e.message : e) + "</pre>";
-                console.error(e);
-            }
-        })();
-    </script>
+  <script>
+    (function () {
+      var src = document.getElementById("app-source").textContent;
+      try {
+        var out = Babel.transform(src, { presets: [["react", { runtime: "classic" }]] }).code;
+        var s = document.createElement("script");
+        s.text = out + "\nvar root = ReactDOM.createRoot(document.getElementById('root'));\nroot.render(React.createElement(AppRaiz));";
+        document.body.appendChild(s);
+      } catch (e) {
+        document.getElementById("root").innerHTML =
+          "<pre style=\"padding:24px;color:#a32d2d;white-space:pre-wrap;font-family:monospace\">" +
+          "Error al preparar la demo:\n" + (e && e.message ? e.message : e) + "</pre>";
+        console.error(e);
+      }
+    })();
+  </script>
 </body>
 
 </html>
