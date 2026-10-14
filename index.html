@@ -2,47 +2,47 @@
 <html lang="es">
 
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Cotizador de Presupuestos · CE CONSULTING</title>
-  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-  <script src="https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-  <script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <style>
-    html,
-    body {
-      margin: 0;
-      padding: 0;
-    }
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cotizador de Presupuestos · CE CONSULTING</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <script src="https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+        }
 
-    .footer-lasautt {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      height: 32px;
-      background: #36404A;
-      color: #DCE2ED;
-      display: flex;
-      align-items: center;
-      padding-left: 115px;
-      font-size: 10px;
-      font-family: Arial, sans-serif;
-      z-index: 9999;
-    }
-  </style>
+        .footer-lasautt {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 32px;
+            background: #36404A;
+            color: #DCE2ED;
+            display: flex;
+            align-items: center;
+            padding-left: 115px;
+            font-size: 10px;
+            font-family: Arial, sans-serif;
+            z-index: 9999;
+        }
+    </style>
 </head>
 
 <body>
-  <div id="root"></div>
+    <div id="root"></div>
 
-  <div class="footer-lasautt">
-    2026 © Lasautt
-  </div>
-  <script type="text/plain" id="app-source">
+    <div class="footer-lasautt">
+        2026 © Lasautt
+    </div>
+    <script type="text/plain" id="app-source">
 const { useState, useEffect } = React;
 
 function Icon({ children, size = 16, color = "currentColor", style, strokeWidth = 2 }) {
@@ -147,22 +147,6 @@ async function actualizarEstadoPresupuestoN8N(token, id, estado) {
     return false;
   }
 }
-
-async function listarUsuariosN8N(token) {
-  const url = "https://n8n-n8n.vhtza8.easypanel.host/webhook/listar-usuarios";
-  try {
-    const r = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token }),
-    });
-    const datos = await r.json();
-    return Array.isArray(datos) ? datos : [];
-  } catch {
-    return [];
-  }
-}
-
 
 async function enviarPresupuestoAN8N(datos) {
   const webhookUrl = "https://n8n-n8n.vhtza8.easypanel.host/webhook/guardar-presupuesto";
@@ -3110,6 +3094,9 @@ function PlantillaEncomiendaAlsago({
       total: 0,
       oficina: datos.oficina || "",
       creadoPor: sesion?.nombre_usuario,
+      token: sesion?.token,
+      email: datos.email,
+      telefono: datos.telefono,
     };
 
     const datosCompletos = {
@@ -4125,6 +4112,9 @@ function PlantillaPresupuestoAlsago({
       total,
       oficina: datos.oficina || "",
       creadoPor: sesion?.nombre_usuario,
+      token: sesion?.token,
+      email: datos.email,
+      telefono: datos.telefono,
     };
 
     const datosCompletos = {
@@ -4291,28 +4281,7 @@ function PlantillaPresupuestoAlsago({
             />
 
             <div style={{ height: 10 }} />
-
-            <Campo 
-              label="Email" 
-              value={datos.email} 
-              onChange={(v) => 
-                setD("email", v)
-              } 
-                placeholder="Email"
-            />
-              
-            <div style={{ height: 10 }} />
-
-            <Campo 
-              label="Teléfono" 
-              value={datos.telefono} 
-              onChange={(v) => 
-                setD("telefono", v)
-              } 
-                laceholder="Telefono"
-            />
-
-            <div style={{ height: 10 }} />
+            
 
             <Campo
               label="Fecha"
@@ -5248,6 +5217,9 @@ function PlantillaFichaAvanta({ label, modeloId, datosRecuperados, limpiarRecupe
       total: 0,
       oficina: datos.oficina || "",
       creadoPor: sesion?.nombre_usuario,
+      token: sesion?.token,
+      email: datos.email,
+      telefono: datos.telefono,
     };
 
     const datosCompletos = {
@@ -5457,15 +5429,14 @@ function HistorialScreen({ sesion }) {
   const [cargando, setCargando] = useState(true);
   const [filtroUsuario, setFiltroUsuario] = useState("");
 
-    const [usuarios, setUsuarios] = useState([]);
-
   useEffect(() => {
     consultarPresupuestosN8N(sesion?.token).then((d) => {
       setRegistros(Array.isArray(d) ? d : []);
       setCargando(false);
     });
-    listarUsuariosN8N(sesion?.token).then((d) => setUsuarios(d.map((u) => u.nombre_usuario)));
   }, []);
+
+  const usuarios = [...new Set(registros.map((r) => r.creado_por).filter(Boolean))].sort();
   const lista = registros.filter((r) => !filtroUsuario || r.creado_por === filtroUsuario);
 
   const th = { textAlign: "left", padding: "10px 12px", fontSize: 11.5, color: STEEL, borderBottom: `1px solid ${HAIR}` };
@@ -5517,8 +5488,6 @@ function AuditoriaScreen({ sesion }) {
   const [cargando, setCargando] = useState(true);
   const [filtroUsuario, setFiltroUsuario] = useState("");
 
-    const [usuarios, setUsuarios] = useState([]);
-
   useEffect(() => {
     fetch("https://n8n-n8n.vhtza8.easypanel.host/webhook/consultar-auditoria", {
       method: "POST",
@@ -5528,9 +5497,9 @@ function AuditoriaScreen({ sesion }) {
       .then((r) => r.json())
       .then((d) => { setRegistros(Array.isArray(d) ? d : []); setCargando(false); })
       .catch(() => setCargando(false));
-    listarUsuariosN8N(sesion?.token).then((d) => setUsuarios(d.map((u) => u.nombre_usuario)));
   }, []);
 
+  const usuarios = [...new Set(registros.map((r) => r.usuario).filter(Boolean))].sort();
   const lista = registros.filter((r) => !filtroUsuario || r.usuario === filtroUsuario);
   const th = { textAlign: "left", padding: "10px 12px", fontSize: 11.5, color: STEEL, borderBottom: `1px solid ${HAIR}` };
   const td = { padding: "10px 12px", fontSize: 12.5, color: NAVY, borderBottom: `1px solid ${HAIR}` };
@@ -5585,23 +5554,24 @@ function ClientesScreen({ onAbrirPresupuesto, sesion }) {
   const [filtroEstado, setFiltroEstado] = useState("");
   const [filtroModelo, setFiltroModelo] = useState("");
 
-  const [oficinasReales, setOficinasReales] = useState([]);
-
   useEffect(() => {
     consultarPresupuestosN8N(sesion?.token).then((datos) => {
       setRegistros(Array.isArray(datos) ? datos : []);
       setCargando(false);
     });
-    misOficinasN8N(sesion?.token).then(setOficinasReales);
   }, []);
 
   function eliminar(id) {
     setRegistros((prev) => prev.filter((r) => r.id !== id));
   }
 
-const oficinasDisponibles = oficinasReales
-  .map((o) => o.nombre)
-  .sort();
+const oficinasDisponibles = [
+  ...new Set(
+    registros
+      .map((r) => r.oficina)
+      .filter(Boolean)
+  ),
+].sort();
 
 const modelosDisponibles = MODELOS
   .filter(
@@ -5898,22 +5868,22 @@ const listaGrupos = Object.values(grupos).filter((g) => {
   );
 }
 </script>
-  <script>
-    (function () {
-      var src = document.getElementById("app-source").textContent;
-      try {
-        var out = Babel.transform(src, { presets: [["react", { runtime: "classic" }]] }).code;
-        var s = document.createElement("script");
-        s.text = out + "\nvar root = ReactDOM.createRoot(document.getElementById('root'));\nroot.render(React.createElement(AppRaiz));";
-        document.body.appendChild(s);
-      } catch (e) {
-        document.getElementById("root").innerHTML =
-          "<pre style=\"padding:24px;color:#a32d2d;white-space:pre-wrap;font-family:monospace\">" +
-          "Error al preparar la demo:\n" + (e && e.message ? e.message : e) + "</pre>";
-        console.error(e);
-      }
-    })();
-  </script>
+    <script>
+        (function () {
+            var src = document.getElementById("app-source").textContent;
+            try {
+                var out = Babel.transform(src, { presets: [["react", { runtime: "classic" }]] }).code;
+                var s = document.createElement("script");
+                s.text = out + "\nvar root = ReactDOM.createRoot(document.getElementById('root'));\nroot.render(React.createElement(AppRaiz));";
+                document.body.appendChild(s);
+            } catch (e) {
+                document.getElementById("root").innerHTML =
+                    "<pre style=\"padding:24px;color:#a32d2d;white-space:pre-wrap;font-family:monospace\">" +
+                    "Error al preparar la demo:\n" + (e && e.message ? e.message : e) + "</pre>";
+                console.error(e);
+            }
+        })();
+    </script>
 </body>
 
 </html>
