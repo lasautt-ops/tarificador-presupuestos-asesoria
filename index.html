@@ -1011,7 +1011,7 @@ function PaginaZm({ children, numero }) {
 // ---------- Plantilla: Autónomo fiscal sin trabajadores ----------
 
 function PlantillaFiscalSimple({ label, modeloId, datosRecuperados, limpiarRecuperados, sesion }) {
-  const [cliente, setCliente] = useState({ nombre: "", dni: "", direccion: "", cp: "", email: "", telefono: "", oficina: "", fecha: todayDMY() });
+  const [cliente, setCliente] = useState({ nombre: "", dni: "", direccion: "", cp: "", poblacion: "", email: "", telefono: "", oficina: "", fecha: todayDMY() });
   const [oficinasDisponibles, setOficinasDisponibles] = useState([]);
 
   useEffect(() => {
@@ -1024,13 +1024,9 @@ function PlantillaFiscalSimple({ label, modeloId, datosRecuperados, limpiarRecup
   useEffect(() => {
     if (!datosRecuperados) return;
     const d = datosRecuperados;
-    if (d.cliente) setCliente(d.cliente);
+    if (d.cliente) setCliente({ poblacion: "", ...d.cliente });
     if (d.contrato) setContrato(d.contrato);
     if (d.serviciosExtra) setServiciosExtra(d.serviciosExtra);
-    if (d.precioServicioFiscal !== undefined) setPrecioServicioFiscal(d.precioServicioFiscal);
-    if (d.descuentoPct !== undefined) setDescuentoPct(d.descuentoPct);
-    if (d.aplicarDescuento !== undefined) setAplicarDescuento(d.aplicarDescuento);
-    if (d.cuotaAlta !== undefined) setCuotaAlta(d.cuotaAlta);
     if (d.lineasExtra) setLineasExtra(d.lineasExtra);
     if (d.nombreFirmante !== undefined) setNombreFirmante(d.nombreFirmante);
     if (d.deudor) setDeudor(d.deudor);
@@ -1038,11 +1034,10 @@ function PlantillaFiscalSimple({ label, modeloId, datosRecuperados, limpiarRecup
   }, [datosRecuperados]);
   const [contrato, setContrato] = useState({ representacion: "", direccionContrato: "", cif: "" });
   const [serviciosExtra, setServiciosExtra] = useState([]);
-  const [precioServicioFiscal, setPrecioServicioFiscal] = useState(0);
-  const [descuentoPct, setDescuentoPct] = useState(0);
-  const [aplicarDescuento, setAplicarDescuento] = useState(false);
-  const [cuotaAlta, setCuotaAlta] = useState(0);
-  const [lineasExtra, setLineasExtra] = useState([]);
+    const [lineasExtra, setLineasExtra] = useState([
+    { id: uid(), concepto: "Servicio Fiscal", cantidad: 1, precioMes: 0 },
+    { id: uid(), concepto: "Cuota de alta", cantidad: 1, precioMes: 0 },
+  ]);
   const [nombreFirmante, setNombreFirmante] = useState("");
   const [deudor, setDeudor] = useState({ nombre: "", direccion: "", cp: "", pais: "ESPAÑA", swift: "", iban: "", tipoPago: "recurrente" });
 
@@ -1050,10 +1045,7 @@ function PlantillaFiscalSimple({ label, modeloId, datosRecuperados, limpiarRecup
   const setK = (k, v) => setContrato((c) => ({ ...c, [k]: v }));
   const setD = (k, v) => setDeudor((d) => ({ ...d, [k]: v }));
 
-  const descuentoImporte = (Number(precioServicioFiscal) || 0) * ((Number(descuentoPct) || 0) / 100);
-  const netoServicio = (Number(precioServicioFiscal) || 0) - descuentoImporte;
-  const extraTotal = lineasExtra.reduce((s, l) => s + (Number(l.importe) || 0), 0);
-  const total = netoServicio + (Number(cuotaAlta) || 0) + extraTotal;
+  const total = lineasExtra.reduce((s, l) => s + (Number(l.cantidad) || 0) * (Number(l.precioMes) || 0), 0);
   const TOTAL_PAGINAS = 7;
   const fecha = cliente.fecha;
 
@@ -1069,7 +1061,7 @@ function PlantillaFiscalSimple({ label, modeloId, datosRecuperados, limpiarRecup
           <button
             onClick={async () => {
               const resumen = { modelo: label, modeloId, nombre: cliente.nombre || "Cliente sin nombre", empresa: contrato.representacion, cif: contrato.cif, total, oficina: cliente.oficina, creadoPor: sesion?.nombre_usuario, token: sesion?.token, email: cliente.email, telefono: cliente.telefono };
-              const datosCompletos = { cliente, contrato, precioServicioFiscal, descuentoPct, aplicarDescuento, cuotaAlta, lineasExtra, serviciosExtra, nombreFirmante, deudor };
+              const datosCompletos = { cliente, contrato, serviciosExtra, lineasExtra, nombreFirmante, deudor };
               guardarRegistro(resumen);
               const ok = await enviarPresupuestoAN8N({ ...resumen, datosCompletos });
               if (ok) {
@@ -1117,6 +1109,7 @@ function PlantillaFiscalSimple({ label, modeloId, datosRecuperados, limpiarRecup
               <Campo label="D.N.I. / C.I.F." value={cliente.dni} onChange={(v) => setC("dni", v)} placeholder="12345678A" />
               <Campo label="Dirección" value={cliente.direccion} onChange={(v) => setC("direccion", v)} />
               <Campo label="C.P." value={cliente.cp} onChange={(v) => setC("cp", v)} />
+              <Campo label="Población" value={cliente.poblacion} onChange={(v) => setC("poblacion", v)} />
               <Campo label="Fecha" value={cliente.fecha} onChange={(v) => setC("fecha", v)} />
               <Campo label="Email" value={cliente.email} onChange={(v) => setC("email", v)} />
               <Campo label="Teléfono" value={cliente.telefono} onChange={(v) => setC("telefono", v)} />
@@ -1147,37 +1140,26 @@ function PlantillaFiscalSimple({ label, modeloId, datosRecuperados, limpiarRecup
 
           <div style={cardStyle}>
             <div style={sectionTitleStyle}>Honorarios</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <Campo label="Servicio Fiscal (€)" type="number" value={precioServicioFiscal} onChange={setPrecioServicioFiscal} />
-              <label style={{ fontSize: 12.5, display: "flex", alignItems: "center", gap: 6 }}>
-                <input
-                  type="checkbox"
-                  checked={aplicarDescuento}
-                  onChange={(e) => {
-                    setAplicarDescuento(e.target.checked);
-                    if (!e.target.checked) setDescuentoPct(0);
-                  }}
-                />
-                Aplicar descuento
-              </label>
-              {aplicarDescuento && (
-                <Campo label="Descuento (%)" type="number" value={descuentoPct} onChange={setDescuentoPct} />
-              )}
-              <Campo label="Cuota de alta (€)" type="number" value={cuotaAlta} onChange={setCuotaAlta} />
-            </div>
-
-            {lineasExtra.map((l) => (
-              <div key={l.id} style={{ display: "flex", gap: 6, marginTop: 10 }}>
-                <input style={{ ...inputStyle, flex: 1 }} placeholder="Concepto" value={l.concepto}
+                        {lineasExtra.map((l) => (
+              <div key={l.id} style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 10, paddingBottom: 10, borderBottom: `1px dashed ${HAIR}` }}>
+                <input style={{ ...inputStyle }} placeholder="Concepto" value={l.concepto}
                   onChange={(e) => setLineasExtra((prev) => prev.map((x) => (x.id === l.id ? { ...x, concepto: e.target.value } : x)))} />
-                <input style={{ ...inputStyle, width: 90 }} type="number" placeholder="€" value={l.importe}
-                  onChange={(e) => setLineasExtra((prev) => prev.map((x) => (x.id === l.id ? { ...x, importe: e.target.value } : x)))} />
-                <button onClick={() => setLineasExtra((prev) => prev.filter((x) => x.id !== l.id))} style={{ background: "none", border: "none", color: "#C0362C", cursor: "pointer" }}>
-                  <Trash2 size={15} />
-                </button>
+                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                  <input style={{ ...inputStyle, width: 65 }} type="number" placeholder="Cant." value={l.cantidad}
+                    onChange={(e) => setLineasExtra((prev) => prev.map((x) => (x.id === l.id ? { ...x, cantidad: e.target.value } : x)))} />
+                  <span style={{ fontSize: 12, color: MUTE }}>x</span>
+                  <input style={{ ...inputStyle, width: 90 }} type="number" placeholder="€/mes" value={l.precioMes}
+                    onChange={(e) => setLineasExtra((prev) => prev.map((x) => (x.id === l.id ? { ...x, precioMes: e.target.value } : x)))} />
+                  <span style={{ fontSize: 12, color: MUTE, flex: 1, textAlign: "right" }}>
+                    {eur((Number(l.cantidad) || 0) * (Number(l.precioMes) || 0))}
+                  </span>
+                  <button onClick={() => setLineasExtra((prev) => prev.filter((x) => x.id !== l.id))} style={{ background: "none", border: "none", color: "#C0362C", cursor: "pointer" }}>
+                    <Trash2 size={15} />
+                  </button>
+                </div>
               </div>
             ))}
-            <button onClick={() => setLineasExtra((prev) => [...prev, { id: uid(), concepto: "", importe: 0 }])} style={{ ...btn("#fff", NAVY, HAIR), marginTop: 10 }}>
+            <button onClick={() => setLineasExtra((prev) => [...prev, { id: uid(), concepto: "", cantidad: 1, precioMes: 0 }])} style={{ ...btn("#fff", NAVY, HAIR), marginTop: 10 }}>
               <Plus size={14} /> Añadir línea de honorarios
             </button>
 
@@ -1239,6 +1221,7 @@ function PlantillaFiscalSimple({ label, modeloId, datosRecuperados, limpiarRecup
       <div><b>D.N.I / C.I.F:</b> <Dato value={cliente.dni} placeholder="" /></div>
       <div><b>Dirección:</b> <Dato value={cliente.direccion} placeholder="" /></div>
       <div><b>C.p:</b> <Dato value={cliente.cp} placeholder="" /></div>
+      <div><b>Población:</b> <Dato value={cliente.poblacion} placeholder="" /></div>
       <div><b>Fecha:</b> <Dato value={fecha} placeholder="" /></div>
       <div><b>Oficina:</b> <Dato value={cliente.oficina} placeholder="" /></div>
     </div>
@@ -1298,30 +1281,17 @@ function PlantillaFiscalSimple({ label, modeloId, datosRecuperados, limpiarRecup
             <div style={{ fontSize: 15, color: RED, fontWeight: 600, marginBottom: 14 }}>Honorarios</div>
             <div style={{ fontSize: 11.5, fontWeight: 700, color: RED, marginBottom: 8 }}>Servicios Presupuestados:</div>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
-              <thead><tr><th></th><th style={{ textAlign: "right", fontWeight: 600, paddingBottom: 6 }}>IMPORTE</th></tr></thead>
-              <tbody>
-                <tr style={{ borderTop: `1px solid ${NAVY}` }}>
-                  <td style={{ padding: "8px 0" }}>Servicio Fiscal</td>
-                  <td style={{ textAlign: "right" }}>{eur(Number(precioServicioFiscal) || 0)}</td>
-                </tr>
-                {aplicarDescuento && (
-                  <tr>
-                    <td style={{ padding: "8px 0" }}>Descuento {descuentoPct}%</td>
-                    <td style={{ textAlign: "right" }}>- {eur(descuentoImporte)}</td>
-                  </tr>
-                )}
-                <tr>
-                  <td style={{ padding: "8px 0" }}>Cuota de alta</td>
-                  <td style={{ textAlign: "right" }}>{eur(Number(cuotaAlta) || 0)}</td>
-                </tr>
-                {lineasExtra.map((l) => (
-                  <tr key={l.id}>
-                    <td style={{ padding: "8px 0" }}><Dato value={l.concepto} placeholder="Nuevo concepto" /></td>
-                    <td style={{ textAlign: "right" }}>{eur(Number(l.importe) || 0)}</td>
-                  </tr>
+              <thead><tr><th></th><th style={{ textAlign: "right", fontWeight: 600, paddingBottom: 6, paddingRight: 14 }}>CANT. x CUOTA</th><th style={{ textAlign: "right", fontWeight: 600, paddingBottom: 6 }}>IMPORTE</th></tr></thead>
+                            <tbody>
+                {lineasExtra.map((l, i) => (
+                  <tr key={l.id} style={i === 0 ? { borderTop: `1px solid ${NAVY}` } : undefined}>
+  <td style={{ padding: "8px 0" }}>{l.concepto || "Nuevo concepto"}</td>
+  <td style={{ textAlign: "right", paddingRight: 14, whiteSpace: "nowrap", color: "#555" }}>{Number(l.cantidad) || 0} x {eur(Number(l.precioMes) || 0)}</td>
+  <td style={{ textAlign: "right" }}>{eur(Number(l.cantidad) * Number(l.precioMes) || 0)}</td>
+</tr>
                 ))}
                 <tr style={{ borderTop: `1.5px solid ${NAVY}` }}>
-                  <td style={{ padding: "10px 0", fontWeight: 700 }}>TOTAL</td>
+                  <td colSpan={2} style={{ padding: "10px 0", fontWeight: 700 }}>TOTAL</td>
                   <td style={{ textAlign: "right", fontWeight: 700 }}>{eur(total)}</td>
                 </tr>
               </tbody>
@@ -1504,7 +1474,7 @@ function PlantillaFiscalSimple({ label, modeloId, datosRecuperados, limpiarRecup
 // ---------- Plantilla: Autónomo/Sociedad Fiscal y Laboral (9 páginas) ----------
 
 function PlantillaFiscalYLaboral({ label, modeloId, datosRecuperados, limpiarRecuperados, sesion }) {
-  const [cliente, setCliente] = useState({ nombre: "", dni: "", direccion: "", cp: "", email: "", telefono: "", oficina: "", fecha: todayDMY() });
+  const [cliente, setCliente] = useState({ nombre: "", dni: "", direccion: "", cp: "", poblacion: "", email: "", telefono: "", oficina: "", fecha: todayDMY() });
   const [oficinasDisponibles, setOficinasDisponibles] = useState([]);
 
   useEffect(() => {
@@ -1516,26 +1486,26 @@ function PlantillaFiscalYLaboral({ label, modeloId, datosRecuperados, limpiarRec
   const [contrato, setContrato] = useState({ representacion: "", direccionContrato: "", cif: "" });
   const [servExtra2, setServExtra2] = useState([]); // pagina 2 - servicio laboral
   const [servExtra3, setServExtra3] = useState([]); // pagina 3 - fiscal y contable
-  const [precioLaboral, setPrecioLaboral] = useState(0);
-  const [precioFiscalContable, setPrecioFiscalContable] = useState(0);
-  const [cuotaEmpresa, setCuotaEmpresa] = useState(0);
-  const [precioNomina, setPrecioNomina] = useState(0);
-  const [lineasExtra, setLineasExtra] = useState([]);
+    const [lineasExtra, setLineasExtra] = useState([
+    { id: uid(), concepto: "Servicio Laboral Integral Gestión y Asesoramiento (*)", cantidad: 1, precioMes: 0 },
+    { id: uid(), concepto: "Servicio Fiscal y Contable", cantidad: 1, precioMes: 0 },
+  ]);
+  const [lineasDesglose, setLineasDesglose] = useState([
+    { id: uid(), concepto: "Cuota de Empresa (1ª Nómina)", cantidad: 1, precioMes: 0 },
+    { id: uid(), concepto: "Precio por Nómina", cantidad: 1, precioMes: 0 },
+  ]);
   const [nombreFirmante, setNombreFirmante] = useState("");
   const [deudor, setDeudor] = useState({ nombre: "", direccion: "", cp: "", iban: "", swift: "", tipoPago: "recurrente" });
 
   useEffect(() => {
     if (!datosRecuperados) return;
     const d = datosRecuperados;
-    if (d.cliente) setCliente(d.cliente);
+    if (d.cliente) setCliente({ poblacion: "", ...d.cliente });
     if (d.contrato) setContrato(d.contrato);
     if (d.servExtra2) setServExtra2(d.servExtra2);
     if (d.servExtra3) setServExtra3(d.servExtra3);
-    if (d.precioLaboral !== undefined) setPrecioLaboral(d.precioLaboral);
-    if (d.precioFiscalContable !== undefined) setPrecioFiscalContable(d.precioFiscalContable);
-    if (d.cuotaEmpresa !== undefined) setCuotaEmpresa(d.cuotaEmpresa);
-    if (d.precioNomina !== undefined) setPrecioNomina(d.precioNomina);
-    if (d.lineasExtra) setLineasExtra(d.lineasExtra);
+        if (d.lineasExtra) setLineasExtra(d.lineasExtra);
+    if (d.lineasDesglose) setLineasDesglose(d.lineasDesglose);
     if (d.nombreFirmante !== undefined) setNombreFirmante(d.nombreFirmante);
     if (d.deudor) setDeudor(d.deudor);
     limpiarRecuperados();
@@ -1545,8 +1515,8 @@ function PlantillaFiscalYLaboral({ label, modeloId, datosRecuperados, limpiarRec
   const setK = (k, v) => setContrato((c) => ({ ...c, [k]: v }));
   const setD = (k, v) => setDeudor((d) => ({ ...d, [k]: v }));
 
-  const extraTotal = lineasExtra.reduce((s, l) => s + (Number(l.importe) || 0), 0);
-  const total = (Number(precioLaboral) || 0) + (Number(precioFiscalContable) || 0) + (Number(cuotaEmpresa) || 0) + (Number(precioNomina) || 0) + extraTotal;
+  const sumaLineas = (arr) => arr.reduce((s, l) => s + (Number(l.cantidad) || 0) * (Number(l.precioMes) || 0), 0);
+  const total = sumaLineas(lineasExtra) + sumaLineas(lineasDesglose);
   const TOTAL_PAGINAS = 8;
   const fecha = cliente.fecha;
 
@@ -1561,7 +1531,7 @@ function PlantillaFiscalYLaboral({ label, modeloId, datosRecuperados, limpiarRec
           <button
             onClick={async () => {
               const resumen = { modelo: label, modeloId, nombre: cliente.nombre || "Cliente sin nombre", empresa: contrato.representacion, cif: contrato.cif, total, oficina: cliente.oficina, creadoPor: sesion?.nombre_usuario, token: sesion?.token, email: cliente.email, telefono: cliente.telefono };
-              const datosCompletos = { cliente, contrato, servExtra2, servExtra3, precioLaboral, precioFiscalContable, cuotaEmpresa, precioNomina, lineasExtra, nombreFirmante, deudor };
+              const datosCompletos = { cliente, contrato, servExtra2, servExtra3, lineasExtra, lineasDesglose, nombreFirmante, deudor };
               guardarRegistro(resumen);
               const ok = await enviarPresupuestoAN8N({ ...resumen, datosCompletos });
               if (ok) {
@@ -1608,6 +1578,7 @@ function PlantillaFiscalYLaboral({ label, modeloId, datosRecuperados, limpiarRec
               <Campo label="D.N.I. / C.I.F." value={cliente.dni} onChange={(v) => setC("dni", v)} placeholder="12345678A" />
               <Campo label="Dirección" value={cliente.direccion} onChange={(v) => setC("direccion", v)} />
               <Campo label="C.P." value={cliente.cp} onChange={(v) => setC("cp", v)} />
+              <Campo label="Población" value={cliente.poblacion} onChange={(v) => setC("poblacion", v)} />
               <Campo label="Fecha" value={cliente.fecha} onChange={(v) => setC("fecha", v)} />
               <Campo label="Email" value={cliente.email} onChange={(v) => setC("email", v)} />
               <Campo label="Teléfono" value={cliente.telefono} onChange={(v) => setC("telefono", v)} />
@@ -1636,28 +1607,55 @@ function PlantillaFiscalYLaboral({ label, modeloId, datosRecuperados, limpiarRec
             </div>
           </div>
 
-          <div style={cardStyle}>
-            <div style={sectionTitleStyle}>Honorarios</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <Campo label="Servicio Laboral Integral (€)" type="number" value={precioLaboral} onChange={setPrecioLaboral} />
-              <Campo label="Servicio Fiscal y Contable (€)" type="number" value={precioFiscalContable} onChange={setPrecioFiscalContable} />
-              <Campo label="Cuota de Empresa - 1ª Nómina (€)" type="number" value={cuotaEmpresa} onChange={setCuotaEmpresa} />
-              <Campo label="Precio por Nómina (€)" type="number" value={precioNomina} onChange={setPrecioNomina} />
-            </div>
+                    <div style={cardStyle}>
+            <div style={sectionTitleStyle}>Honorarios — Servicios Presupuestados</div>
             {lineasExtra.map((l) => (
-              <div key={l.id} style={{ display: "flex", gap: 6, marginTop: 10 }}>
-                <input style={{ ...inputStyle, flex: 1 }} placeholder="Concepto" value={l.concepto}
+              <div key={l.id} style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 10, paddingBottom: 10, borderBottom: `1px dashed ${HAIR}` }}>
+                <input style={{ ...inputStyle }} placeholder="Concepto" value={l.concepto}
                   onChange={(e) => setLineasExtra((prev) => prev.map((x) => (x.id === l.id ? { ...x, concepto: e.target.value } : x)))} />
-                <input style={{ ...inputStyle, width: 90 }} type="number" placeholder="€" value={l.importe}
-                  onChange={(e) => setLineasExtra((prev) => prev.map((x) => (x.id === l.id ? { ...x, importe: e.target.value } : x)))} />
-                <button onClick={() => setLineasExtra((prev) => prev.filter((x) => x.id !== l.id))} style={{ background: "none", border: "none", color: "#C0362C", cursor: "pointer" }}>
-                  <Trash2 size={15} />
-                </button>
+                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                  <input style={{ ...inputStyle, width: 65 }} type="number" placeholder="Cant." value={l.cantidad}
+                    onChange={(e) => setLineasExtra((prev) => prev.map((x) => (x.id === l.id ? { ...x, cantidad: e.target.value } : x)))} />
+                  <span style={{ fontSize: 12, color: MUTE }}>x</span>
+                  <input style={{ ...inputStyle, width: 90 }} type="number" placeholder="€/mes" value={l.precioMes}
+                    onChange={(e) => setLineasExtra((prev) => prev.map((x) => (x.id === l.id ? { ...x, precioMes: e.target.value } : x)))} />
+                  <span style={{ fontSize: 12, color: MUTE, flex: 1, textAlign: "right" }}>
+                    {eur((Number(l.cantidad) || 0) * (Number(l.precioMes) || 0))}
+                  </span>
+                  <button onClick={() => setLineasExtra((prev) => prev.filter((x) => x.id !== l.id))} style={{ background: "none", border: "none", color: "#C0362C", cursor: "pointer" }}>
+                    <Trash2 size={15} />
+                  </button>
+                </div>
               </div>
             ))}
-            <button onClick={() => setLineasExtra((prev) => [...prev, { id: uid(), concepto: "", importe: 0 }])} style={{ ...btn("#fff", NAVY, HAIR), marginTop: 10 }}>
+            <button onClick={() => setLineasExtra((prev) => [...prev, { id: uid(), concepto: "", cantidad: 1, precioMes: 0 }])} style={{ ...btn("#fff", NAVY, HAIR), marginTop: 10 }}>
               <Plus size={14} /> Añadir línea de honorarios
             </button>
+
+            <div style={{ ...sectionTitleStyle, marginTop: 20 }}>Desglose Tarifa Servicio Laboral</div>
+            {lineasDesglose.map((l) => (
+              <div key={l.id} style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 10, paddingBottom: 10, borderBottom: `1px dashed ${HAIR}` }}>
+                <input style={{ ...inputStyle }} placeholder="Concepto" value={l.concepto}
+                  onChange={(e) => setLineasDesglose((prev) => prev.map((x) => (x.id === l.id ? { ...x, concepto: e.target.value } : x)))} />
+                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                  <input style={{ ...inputStyle, width: 65 }} type="number" placeholder="Cant." value={l.cantidad}
+                    onChange={(e) => setLineasDesglose((prev) => prev.map((x) => (x.id === l.id ? { ...x, cantidad: e.target.value } : x)))} />
+                  <span style={{ fontSize: 12, color: MUTE }}>x</span>
+                  <input style={{ ...inputStyle, width: 90 }} type="number" placeholder="€/mes" value={l.precioMes}
+                    onChange={(e) => setLineasDesglose((prev) => prev.map((x) => (x.id === l.id ? { ...x, precioMes: e.target.value } : x)))} />
+                  <span style={{ fontSize: 12, color: MUTE, flex: 1, textAlign: "right" }}>
+                    {eur((Number(l.cantidad) || 0) * (Number(l.precioMes) || 0))}
+                  </span>
+                  <button onClick={() => setLineasDesglose((prev) => prev.filter((x) => x.id !== l.id))} style={{ background: "none", border: "none", color: "#C0362C", cursor: "pointer" }}>
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+              </div>
+            ))}
+            <button onClick={() => setLineasDesglose((prev) => [...prev, { id: uid(), concepto: "", cantidad: 1, precioMes: 0 }])} style={{ ...btn("#fff", NAVY, HAIR), marginTop: 10 }}>
+              <Plus size={14} /> Añadir línea al desglose
+            </button>
+
             <div style={{ borderTop: `1px dashed ${HAIR}`, marginTop: 14, paddingTop: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span style={{ fontSize: 13, fontWeight: 700, color: NAVY }}>Total</span>
               <span style={{ fontSize: 18, fontWeight: 700, color: GREEN }}>{eur(total)}</span>
@@ -1722,6 +1720,7 @@ function PlantillaFiscalYLaboral({ label, modeloId, datosRecuperados, limpiarRec
       <div><b>D.N.I / C.I.F:</b> <Dato value={cliente.dni} placeholder="" /></div>
       <div><b>Dirección:</b> <Dato value={cliente.direccion} placeholder="" /></div>
       <div><b>C.p:</b> <Dato value={cliente.cp} placeholder="" /></div>
+      <div><b>Población:</b> <Dato value={cliente.poblacion} placeholder="" /></div>
       <div><b>Fecha:</b> <Dato value={fecha} placeholder="" /></div>
       <div><b>Oficina:</b> <Dato value={cliente.oficina} placeholder="" /></div>
     </div>
@@ -1816,24 +1815,17 @@ function PlantillaFiscalYLaboral({ label, modeloId, datosRecuperados, limpiarRec
             <div style={{ fontSize: 15, color: RED, fontWeight: 600, marginBottom: 14 }}>Honorarios</div>
             <div style={{ fontSize: 11.5, fontWeight: 700, color: RED, marginBottom: 8 }}>Servicios Presupuestados:</div>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
-              <thead><tr><th></th><th style={{ textAlign: "right", fontWeight: 600, paddingBottom: 6 }}>IMPORTE</th></tr></thead>
+              <thead><tr><th></th><th style={{ textAlign: "right", fontWeight: 600, paddingBottom: 6, paddingRight: 14 }}>CANT. x CUOTA</th><th style={{ textAlign: "right", fontWeight: 600, paddingBottom: 6 }}>IMPORTE</th></tr></thead>
               <tbody>
-                <tr style={{ borderTop: `1px solid ${NAVY}` }}>
-                  <td style={{ padding: "8px 0" }}>Servicio Laboral Integral Gestión y Asesoramiento (*)</td>
-                  <td style={{ textAlign: "right" }}>{eur(Number(precioLaboral) || 0)}</td>
-                </tr>
-                <tr>
-                  <td style={{ padding: "8px 0" }}>Servicio Fiscal y Contable</td>
-                  <td style={{ textAlign: "right" }}>{eur(Number(precioFiscalContable) || 0)}</td>
-                </tr>
-                {lineasExtra.map((l) => (
-                  <tr key={l.id}>
-                    <td style={{ padding: "8px 0" }}><Dato value={l.concepto} placeholder="Nuevo concepto" /></td>
-                    <td style={{ textAlign: "right" }}>{eur(Number(l.importe) || 0)}</td>
-                  </tr>
+                {lineasExtra.map((l, i) => (
+                  <tr key={l.id} style={i === 0 ? { borderTop: `1px solid ${NAVY}` } : undefined}>
+  <td style={{ padding: "8px 0" }}>{l.concepto || "Nuevo concepto"}</td>
+  <td style={{ textAlign: "right", paddingRight: 14, whiteSpace: "nowrap", color: "#555" }}>{Number(l.cantidad) || 0} x {eur(Number(l.precioMes) || 0)}</td>
+  <td style={{ textAlign: "right" }}>{eur(Number(l.cantidad) * Number(l.precioMes) || 0)}</td>
+</tr>
                 ))}
                 <tr style={{ borderTop: `1.5px solid ${NAVY}` }}>
-                  <td style={{ padding: "10px 0", fontWeight: 700 }}>Total</td>
+                  <td colSpan={2} style={{ padding: "10px 0", fontWeight: 700 }}>Total</td>
                   <td style={{ textAlign: "right", fontWeight: 700 }}>{eur(total)}</td>
                 </tr>
               </tbody>
@@ -1842,16 +1834,15 @@ function PlantillaFiscalYLaboral({ label, modeloId, datosRecuperados, limpiarRec
             <div style={{ fontSize: 11.5, fontWeight: 700, color: RED, marginTop: 18, marginBottom: 8 }}>Desglose Tarifa Servicio Laboral:</div>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
               <tbody>
-                <tr style={{ borderTop: `1px solid ${NAVY}`, backgroundColor: "#F1F4F8" }}>
-                  <td style={{ padding: "6px 6px" }}>Cuota de Empresa (1ª Nómina)</td>
-                  <td style={{ textAlign: "right", padding: "6px 6px" }}>{eur(Number(cuotaEmpresa) || 0)}</td>
-                </tr>
+                {lineasDesglose.map((l, i) => (
+                  <tr key={l.id} style={{ backgroundColor: "#F1F4F8", ...(i === 0 ? { borderTop: `1px solid ${NAVY}` } : {}) }}>
+  <td style={{ padding: "6px 6px" }}>{l.concepto || "Nuevo concepto"}</td>
+  <td style={{ textAlign: "right", padding: "6px 14px 6px 6px", whiteSpace: "nowrap", color: "#555" }}>{Number(l.cantidad) || 0} x {eur(Number(l.precioMes) || 0)}</td>
+  <td style={{ textAlign: "right", padding: "6px 6px" }}>{eur(Number(l.cantidad) * Number(l.precioMes) || 0)}</td>
+</tr>
+                ))}
                 <tr style={{ backgroundColor: "#F1F4F8" }}>
-                  <td style={{ padding: "6px 6px" }}>Precio por Nómina</td>
-                  <td style={{ textAlign: "right", padding: "6px 6px" }}>{eur(Number(precioNomina) || 0)}</td>
-                </tr>
-                <tr style={{ backgroundColor: "#F1F4F8" }}>
-                  <td style={{ padding: "6px 6px" }}>Servicio Gestión Compartida Notificaciones Telemáticas con Seguridad Social</td>
+                  <td colSpan={2} style={{ padding: "6px 6px" }}>Servicio Gestión Compartida Notificaciones Telemáticas con Seguridad Social</td>
                   <td style={{ textAlign: "right", padding: "6px 6px" }}>INCLUIDO</td>
                 </tr>
               </tbody>
@@ -2029,7 +2020,7 @@ function PlantillaFiscalYLaboral({ label, modeloId, datosRecuperados, limpiarRec
 // ---------- Plantilla: Sociedad Laboral (8 páginas, solo servicio laboral) ----------
 
 function PlantillaSociedadLaboral({ label, modeloId, datosRecuperados, limpiarRecuperados, sesion }) {
-  const [cliente, setCliente] = useState({ nombre: "", dni: "", direccion: "", cp: "", email: "", telefono: "", oficina: "", fecha: todayDMY() });
+  const [cliente, setCliente] = useState({ nombre: "", dni: "", direccion: "", cp: "", poblacion: "", email: "", telefono: "", oficina: "", fecha: todayDMY() });
   const [oficinasDisponibles, setOficinasDisponibles] = useState([]);
 
   useEffect(() => {
@@ -2040,20 +2031,19 @@ function PlantillaSociedadLaboral({ label, modeloId, datosRecuperados, limpiarRe
   const [guardadoOk, setGuardadoOk] = useState(false);
   const [contrato, setContrato] = useState({ representacion: "", direccionContrato: "", cif: "" });
   const [servExtra, setServExtra] = useState([]);
-  const [cuotaEmpresa, setCuotaEmpresa] = useState(0);
-  const [precioNomina, setPrecioNomina] = useState(0);
-  const [lineasExtra, setLineasExtra] = useState([]);
+    const [lineasExtra, setLineasExtra] = useState([
+    { id: uid(), concepto: "Cuota de Empresa (1ª Nómina)", cantidad: 1, precioMes: 0 },
+    { id: uid(), concepto: "Precio por Nómina", cantidad: 1, precioMes: 0 },
+  ]);
   const [nombreFirmante, setNombreFirmante] = useState("");
   const [deudor, setDeudor] = useState({ nombre: "", direccion: "", cp: "", iban: "", swift: "", tipoPago: "recurrente" });
 
   useEffect(() => {
     if (!datosRecuperados) return;
     const d = datosRecuperados;
-    if (d.cliente) setCliente(d.cliente);
+    if (d.cliente) setCliente({ poblacion: "", ...d.cliente });
     if (d.contrato) setContrato(d.contrato);
     if (d.servExtra) setServExtra(d.servExtra);
-    if (d.cuotaEmpresa !== undefined) setCuotaEmpresa(d.cuotaEmpresa);
-    if (d.precioNomina !== undefined) setPrecioNomina(d.precioNomina);
     if (d.lineasExtra) setLineasExtra(d.lineasExtra);
     if (d.nombreFirmante !== undefined) setNombreFirmante(d.nombreFirmante);
     if (d.deudor) setDeudor(d.deudor);
@@ -2064,8 +2054,7 @@ function PlantillaSociedadLaboral({ label, modeloId, datosRecuperados, limpiarRe
   const setK = (k, v) => setContrato((c) => ({ ...c, [k]: v }));
   const setD = (k, v) => setDeudor((d) => ({ ...d, [k]: v }));
 
-  const extraTotal = lineasExtra.reduce((s, l) => s + (Number(l.importe) || 0), 0);
-  const total = (Number(cuotaEmpresa) || 0) + (Number(precioNomina) || 0) + extraTotal;
+  const total = lineasExtra.reduce((s, l) => s + (Number(l.cantidad) || 0) * (Number(l.precioMes) || 0), 0);
   const TOTAL_PAGINAS = 9;
   const fecha = cliente.fecha;
 
@@ -2127,6 +2116,7 @@ function PlantillaSociedadLaboral({ label, modeloId, datosRecuperados, limpiarRe
               <Campo label="D.N.I. / C.I.F." value={cliente.dni} onChange={(v) => setC("dni", v)} placeholder="12345678A" />
               <Campo label="Dirección" value={cliente.direccion} onChange={(v) => setC("direccion", v)} />
               <Campo label="C.P." value={cliente.cp} onChange={(v) => setC("cp", v)} />
+              <Campo label="Población" value={cliente.poblacion} onChange={(v) => setC("poblacion", v)} />
               <Campo label="Fecha" value={cliente.fecha} onChange={(v) => setC("fecha", v)} />
               <Campo label="Email" value={cliente.email} onChange={(v) => setC("email", v)} />
               <Campo label="Teléfono" value={cliente.telefono} onChange={(v) => setC("telefono", v)} />
@@ -2155,24 +2145,28 @@ function PlantillaSociedadLaboral({ label, modeloId, datosRecuperados, limpiarRe
             </div>
           </div>
 
-          <div style={cardStyle}>
+                    <div style={cardStyle}>
             <div style={sectionTitleStyle}>Honorarios</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <Campo label="Cuota de Empresa - 1ª Nómina (€)" type="number" value={cuotaEmpresa} onChange={setCuotaEmpresa} />
-              <Campo label="Precio por Nómina (€)" type="number" value={precioNomina} onChange={setPrecioNomina} />
-            </div>
             {lineasExtra.map((l) => (
-              <div key={l.id} style={{ display: "flex", gap: 6, marginTop: 10 }}>
-                <input style={{ ...inputStyle, flex: 1 }} placeholder="Concepto" value={l.concepto}
+              <div key={l.id} style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 10, paddingBottom: 10, borderBottom: `1px dashed ${HAIR}` }}>
+                <input style={{ ...inputStyle }} placeholder="Concepto" value={l.concepto}
                   onChange={(e) => setLineasExtra((prev) => prev.map((x) => (x.id === l.id ? { ...x, concepto: e.target.value } : x)))} />
-                <input style={{ ...inputStyle, width: 90 }} type="number" placeholder="€" value={l.importe}
-                  onChange={(e) => setLineasExtra((prev) => prev.map((x) => (x.id === l.id ? { ...x, importe: e.target.value } : x)))} />
-                <button onClick={() => setLineasExtra((prev) => prev.filter((x) => x.id !== l.id))} style={{ background: "none", border: "none", color: "#C0362C", cursor: "pointer" }}>
-                  <Trash2 size={15} />
-                </button>
+                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                  <input style={{ ...inputStyle, width: 65 }} type="number" placeholder="Cant." value={l.cantidad}
+                    onChange={(e) => setLineasExtra((prev) => prev.map((x) => (x.id === l.id ? { ...x, cantidad: e.target.value } : x)))} />
+                  <span style={{ fontSize: 12, color: MUTE }}>x</span>
+                  <input style={{ ...inputStyle, width: 90 }} type="number" placeholder="€/mes" value={l.precioMes}
+                    onChange={(e) => setLineasExtra((prev) => prev.map((x) => (x.id === l.id ? { ...x, precioMes: e.target.value } : x)))} />
+                  <span style={{ fontSize: 12, color: MUTE, flex: 1, textAlign: "right" }}>
+                    {eur((Number(l.cantidad) || 0) * (Number(l.precioMes) || 0))}
+                  </span>
+                  <button onClick={() => setLineasExtra((prev) => prev.filter((x) => x.id !== l.id))} style={{ background: "none", border: "none", color: "#C0362C", cursor: "pointer" }}>
+                    <Trash2 size={15} />
+                  </button>
+                </div>
               </div>
             ))}
-            <button onClick={() => setLineasExtra((prev) => [...prev, { id: uid(), concepto: "", importe: 0 }])} style={{ ...btn("#fff", NAVY, HAIR), marginTop: 10 }}>
+            <button onClick={() => setLineasExtra((prev) => [...prev, { id: uid(), concepto: "", cantidad: 1, precioMes: 0 }])} style={{ ...btn("#fff", NAVY, HAIR), marginTop: 10 }}>
               <Plus size={14} /> Añadir línea de honorarios
             </button>
             <div style={{ borderTop: `1px dashed ${HAIR}`, marginTop: 14, paddingTop: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -2228,6 +2222,7 @@ function PlantillaSociedadLaboral({ label, modeloId, datosRecuperados, limpiarRe
       <div><b>D.N.I / C.I.F:</b> <Dato value={cliente.dni} placeholder="" /></div>
       <div><b>Dirección:</b> <Dato value={cliente.direccion} placeholder="" /></div>
       <div><b>C.p:</b> <Dato value={cliente.cp} placeholder="" /></div>
+      <div><b>Población:</b> <Dato value={cliente.poblacion} placeholder="" /></div>
       <div><b>Fecha:</b> <Dato value={fecha} placeholder="" /></div>
       <div><b>Oficina:</b> <Dato value={cliente.oficina} placeholder="" /></div>
     </div>
@@ -2287,22 +2282,15 @@ function PlantillaSociedadLaboral({ label, modeloId, datosRecuperados, limpiarRe
             <div style={{ fontSize: 11.5, fontWeight: 700, color: RED, marginTop: 18, marginBottom: 8 }}>Desglose Tarifa Servicio Laboral:</div>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
               <tbody>
-                <tr style={{ borderTop: `1px solid ${NAVY}`, backgroundColor: "#F1F4F8" }}>
-                  <td style={{ padding: "6px 6px" }}>Cuota de Empresa (1ª Nómina)</td>
-                  <td style={{ textAlign: "right", padding: "6px 6px" }}>{eur(Number(cuotaEmpresa) || 0)}</td>
-                </tr>
-                <tr style={{ backgroundColor: "#F1F4F8" }}>
-                  <td style={{ padding: "6px 6px" }}>Precio por Nómina</td>
-                  <td style={{ textAlign: "right", padding: "6px 6px" }}>{eur(Number(precioNomina) || 0)}</td>
-                </tr>
-                {lineasExtra.map((l) => (
-                  <tr key={l.id} style={{ backgroundColor: "#F1F4F8" }}>
-                    <td style={{ padding: "6px 6px" }}><Dato value={l.concepto} placeholder="Nuevo concepto" /></td>
-                    <td style={{ textAlign: "right", padding: "6px 6px" }}>{eur(Number(l.importe) || 0)}</td>
-                  </tr>
+                {lineasExtra.map((l, i) => (
+                  <tr key={l.id} style={{ backgroundColor: "#F1F4F8", ...(i === 0 ? { borderTop: `1px solid ${NAVY}` } : {}) }}>
+  <td style={{ padding: "6px 6px" }}>{l.concepto || "Nuevo concepto"}</td>
+  <td style={{ textAlign: "right", padding: "6px 14px 6px 6px", whiteSpace: "nowrap", color: "#555" }}>{Number(l.cantidad) || 0} x {eur(Number(l.precioMes) || 0)}</td>
+  <td style={{ textAlign: "right", padding: "6px 6px" }}>{eur(Number(l.cantidad) * Number(l.precioMes) || 0)}</td>
+</tr>
                 ))}
                 <tr style={{ borderTop: `1.5px solid ${NAVY}` }}>
-                  <td style={{ padding: "8px 6px", fontWeight: 700 }}>TOTAL</td>
+                  <td colSpan={2} style={{ padding: "8px 6px", fontWeight: 700 }}>TOTAL</td>
                   <td style={{ textAlign: "right", padding: "8px 6px", fontWeight: 700 }}>{eur(total)}</td>
                 </tr>
               </tbody>
