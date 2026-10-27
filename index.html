@@ -1028,6 +1028,7 @@ function PlantillaFiscalSimple({ label, modeloId, datosRecuperados, limpiarRecup
     if (d.contrato) setContrato(d.contrato);
     if (d.serviciosExtra) setServiciosExtra(d.serviciosExtra);
     if (d.lineasExtra) setLineasExtra(d.lineasExtra);
+    if (d.mostrarTotal !== undefined) setMostrarTotal(d.mostrarTotal);
     if (d.nombreFirmante !== undefined) setNombreFirmante(d.nombreFirmante);
     if (d.deudor) setDeudor(d.deudor);
     limpiarRecuperados();
@@ -1038,6 +1039,7 @@ function PlantillaFiscalSimple({ label, modeloId, datosRecuperados, limpiarRecup
     { id: uid(), concepto: "Servicio Fiscal", cantidad: 1, precioMes: 0 },
     { id: uid(), concepto: "Cuota de alta", cantidad: 1, precioMes: 0 },
   ]);
+  const [mostrarTotal, setMostrarTotal] = useState(true);
   const [nombreFirmante, setNombreFirmante] = useState("");
   const [deudor, setDeudor] = useState({ nombre: "", direccion: "", cp: "", pais: "ESPAÑA", swift: "", iban: "", tipoPago: "recurrente" });
 
@@ -1061,7 +1063,7 @@ function PlantillaFiscalSimple({ label, modeloId, datosRecuperados, limpiarRecup
           <button
             onClick={async () => {
               const resumen = { modelo: label, modeloId, nombre: cliente.nombre || "Cliente sin nombre", empresa: contrato.representacion, cif: contrato.cif, total, oficina: cliente.oficina, creadoPor: sesion?.nombre_usuario, token: sesion?.token, email: cliente.email, telefono: cliente.telefono };
-              const datosCompletos = { cliente, contrato, serviciosExtra, lineasExtra, nombreFirmante, deudor };
+                            const datosCompletos = { cliente, contrato, lineasExtra, serviciosExtra, mostrarTotal, nombreFirmante, deudor };
               guardarRegistro(resumen);
               const ok = await enviarPresupuestoAN8N({ ...resumen, datosCompletos });
               if (ok) {
@@ -1163,10 +1165,21 @@ function PlantillaFiscalSimple({ label, modeloId, datosRecuperados, limpiarRecup
               <Plus size={14} /> Añadir línea de honorarios
             </button>
 
-            <div style={{ borderTop: `1px dashed ${HAIR}`, marginTop: 14, paddingTop: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: NAVY }}>Total</span>
-              <span style={{ fontSize: 18, fontWeight: 700, color: GREEN }}>{eur(total)}</span>
-            </div>
+             {mostrarTotal ? (
+              <div style={{ borderTop: `1px dashed ${HAIR}`, marginTop: 14, paddingTop: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: NAVY }}>Total</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 18, fontWeight: 700, color: GREEN }}>{eur(total)}</span>
+                  <button onClick={() => setMostrarTotal(false)} style={{ background: "none", border: "none", color: "#C0362C", cursor: "pointer" }}>
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button onClick={() => setMostrarTotal(true)} style={{ ...btn("#fff", NAVY, HAIR), marginTop: 14 }}>
+                <Plus size={14} /> Mostrar total
+              </button>
+            )}
           </div>
 
           <div style={cardStyle}>
@@ -1290,10 +1303,12 @@ function PlantillaFiscalSimple({ label, modeloId, datosRecuperados, limpiarRecup
   <td style={{ textAlign: "right" }}>{eur(Number(l.cantidad) * Number(l.precioMes) || 0)}</td>
 </tr>
                 ))}
-                <tr style={{ borderTop: `1.5px solid ${NAVY}` }}>
-                  <td colSpan={2} style={{ padding: "10px 0", fontWeight: 700 }}>TOTAL</td>
-                  <td style={{ textAlign: "right", fontWeight: 700 }}>{eur(total)}</td>
-                </tr>
+               {mostrarTotal && (
+                  <tr style={{ borderTop: `1.5px solid ${NAVY}` }}>
+                    <td style={{ padding: "10px 0", fontWeight: 700 }}>TOTAL</td>
+                    <td style={{ textAlign: "right", fontWeight: 700 }}>{eur(total)}</td>
+                  </tr>
+                )}
               </tbody>
             </table>
 
@@ -1494,6 +1509,7 @@ function PlantillaFiscalYLaboral({ label, modeloId, datosRecuperados, limpiarRec
     { id: uid(), concepto: "Cuota de Empresa (1ª Nómina)", cantidad: 1, precioMes: 0 },
     { id: uid(), concepto: "Precio por Nómina", cantidad: 1, precioMes: 0 },
   ]);
+  const [mostrarTotal, setMostrarTotal] = useState(true);
   const [nombreFirmante, setNombreFirmante] = useState("");
   const [deudor, setDeudor] = useState({ nombre: "", direccion: "", cp: "", iban: "", swift: "", tipoPago: "recurrente" });
 
@@ -1504,8 +1520,9 @@ function PlantillaFiscalYLaboral({ label, modeloId, datosRecuperados, limpiarRec
     if (d.contrato) setContrato(d.contrato);
     if (d.servExtra2) setServExtra2(d.servExtra2);
     if (d.servExtra3) setServExtra3(d.servExtra3);
-        if (d.lineasExtra) setLineasExtra(d.lineasExtra);
+    if (d.lineasExtra) setLineasExtra(d.lineasExtra);
     if (d.lineasDesglose) setLineasDesglose(d.lineasDesglose);
+    if (d.mostrarTotal !== undefined) setMostrarTotal(d.mostrarTotal);
     if (d.nombreFirmante !== undefined) setNombreFirmante(d.nombreFirmante);
     if (d.deudor) setDeudor(d.deudor);
     limpiarRecuperados();
@@ -1531,7 +1548,7 @@ function PlantillaFiscalYLaboral({ label, modeloId, datosRecuperados, limpiarRec
           <button
             onClick={async () => {
               const resumen = { modelo: label, modeloId, nombre: cliente.nombre || "Cliente sin nombre", empresa: contrato.representacion, cif: contrato.cif, total, oficina: cliente.oficina, creadoPor: sesion?.nombre_usuario, token: sesion?.token, email: cliente.email, telefono: cliente.telefono };
-              const datosCompletos = { cliente, contrato, servExtra2, servExtra3, lineasExtra, lineasDesglose, nombreFirmante, deudor };
+                            const datosCompletos = { cliente, contrato, servExtra2, servExtra3, lineasExtra, lineasDesglose, mostrarTotal, nombreFirmante, deudor };
               guardarRegistro(resumen);
               const ok = await enviarPresupuestoAN8N({ ...resumen, datosCompletos });
               if (ok) {
@@ -1656,10 +1673,21 @@ function PlantillaFiscalYLaboral({ label, modeloId, datosRecuperados, limpiarRec
               <Plus size={14} /> Añadir línea al desglose
             </button>
 
-            <div style={{ borderTop: `1px dashed ${HAIR}`, marginTop: 14, paddingTop: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: NAVY }}>Total</span>
-              <span style={{ fontSize: 18, fontWeight: 700, color: GREEN }}>{eur(total)}</span>
-            </div>
+          {mostrarTotal ? (
+              <div style={{ borderTop: `1px dashed ${HAIR}`, marginTop: 14, paddingTop: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: NAVY }}>Total</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 18, fontWeight: 700, color: GREEN }}>{eur(total)}</span>
+                  <button onClick={() => setMostrarTotal(false)} style={{ background: "none", border: "none", color: "#C0362C", cursor: "pointer" }}>
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button onClick={() => setMostrarTotal(true)} style={{ ...btn("#fff", NAVY, HAIR), marginTop: 14 }}>
+                <Plus size={14} /> Mostrar total
+              </button>
+            )}
           </div>
 
           <div style={cardStyle}>
@@ -1824,10 +1852,12 @@ function PlantillaFiscalYLaboral({ label, modeloId, datosRecuperados, limpiarRec
   <td style={{ textAlign: "right" }}>{eur(Number(l.cantidad) * Number(l.precioMes) || 0)}</td>
 </tr>
                 ))}
-                <tr style={{ borderTop: `1.5px solid ${NAVY}` }}>
-                  <td colSpan={2} style={{ padding: "10px 0", fontWeight: 700 }}>Total</td>
-                  <td style={{ textAlign: "right", fontWeight: 700 }}>{eur(total)}</td>
-                </tr>
+                {mostrarTotal && (
+                  <tr style={{ borderTop: `1.5px solid ${NAVY}` }}>
+                    <td style={{ padding: "10px 0", fontWeight: 700 }}>Total</td>
+                    <td style={{ textAlign: "right", fontWeight: 700 }}>{eur(total)}</td>
+                  </tr>
+                )}
               </tbody>
             </table>
 
@@ -2035,6 +2065,7 @@ function PlantillaSociedadLaboral({ label, modeloId, datosRecuperados, limpiarRe
     { id: uid(), concepto: "Cuota de Empresa (1ª Nómina)", cantidad: 1, precioMes: 0 },
     { id: uid(), concepto: "Precio por Nómina", cantidad: 1, precioMes: 0 },
   ]);
+  const [mostrarTotal, setMostrarTotal] = useState(true);
   const [nombreFirmante, setNombreFirmante] = useState("");
   const [deudor, setDeudor] = useState({ nombre: "", direccion: "", cp: "", iban: "", swift: "", tipoPago: "recurrente" });
 
@@ -2045,6 +2076,7 @@ function PlantillaSociedadLaboral({ label, modeloId, datosRecuperados, limpiarRe
     if (d.contrato) setContrato(d.contrato);
     if (d.servExtra) setServExtra(d.servExtra);
     if (d.lineasExtra) setLineasExtra(d.lineasExtra);
+    if (d.mostrarTotal !== undefined) setMostrarTotal(d.mostrarTotal);
     if (d.nombreFirmante !== undefined) setNombreFirmante(d.nombreFirmante);
     if (d.deudor) setDeudor(d.deudor);
     limpiarRecuperados();
@@ -2069,7 +2101,7 @@ function PlantillaSociedadLaboral({ label, modeloId, datosRecuperados, limpiarRe
           <button
             onClick={async () => {
               const resumen = { modelo: label, modeloId, nombre: cliente.nombre || "Cliente sin nombre", empresa: contrato.representacion, cif: contrato.cif, total, oficina: cliente.oficina, creadoPor: sesion?.nombre_usuario, token: sesion?.token, email: cliente.email, telefono: cliente.telefono };
-              const datosCompletos = { cliente, contrato, servExtra, cuotaEmpresa, precioNomina, lineasExtra, nombreFirmante, deudor };
+                            const datosCompletos = { cliente, contrato, servExtra, lineasExtra, mostrarTotal, nombreFirmante, deudor };
               guardarRegistro(resumen);
               const ok = await enviarPresupuestoAN8N({ ...resumen, datosCompletos });
               if (ok) {
@@ -2169,10 +2201,21 @@ function PlantillaSociedadLaboral({ label, modeloId, datosRecuperados, limpiarRe
             <button onClick={() => setLineasExtra((prev) => [...prev, { id: uid(), concepto: "", cantidad: 1, precioMes: 0 }])} style={{ ...btn("#fff", NAVY, HAIR), marginTop: 10 }}>
               <Plus size={14} /> Añadir línea de honorarios
             </button>
-            <div style={{ borderTop: `1px dashed ${HAIR}`, marginTop: 14, paddingTop: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: NAVY }}>Total</span>
-              <span style={{ fontSize: 18, fontWeight: 700, color: GREEN }}>{eur(total)}</span>
-            </div>
+            {mostrarTotal ? (
+              <div style={{ borderTop: `1px dashed ${HAIR}`, marginTop: 14, paddingTop: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: NAVY }}>Total</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 18, fontWeight: 700, color: GREEN }}>{eur(total)}</span>
+                  <button onClick={() => setMostrarTotal(false)} style={{ background: "none", border: "none", color: "#C0362C", cursor: "pointer" }}>
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button onClick={() => setMostrarTotal(true)} style={{ ...btn("#fff", NAVY, HAIR), marginTop: 14 }}>
+                <Plus size={14} /> Mostrar total
+              </button>
+            )}
           </div>
 
           <div style={cardStyle}>
@@ -2289,10 +2332,12 @@ function PlantillaSociedadLaboral({ label, modeloId, datosRecuperados, limpiarRe
   <td style={{ textAlign: "right", padding: "6px 6px" }}>{eur(Number(l.cantidad) * Number(l.precioMes) || 0)}</td>
 </tr>
                 ))}
-                <tr style={{ borderTop: `1.5px solid ${NAVY}` }}>
-                  <td colSpan={2} style={{ padding: "8px 6px", fontWeight: 700 }}>TOTAL</td>
-                  <td style={{ textAlign: "right", padding: "8px 6px", fontWeight: 700 }}>{eur(total)}</td>
-                </tr>
+                {mostrarTotal && (
+                  <tr style={{ borderTop: `1.5px solid ${NAVY}` }}>
+                    <td style={{ padding: "8px 6px", fontWeight: 700 }}>TOTAL</td>
+                    <td style={{ textAlign: "right", padding: "8px 6px", fontWeight: 700 }}>{eur(total)}</td>
+                  </tr>
+                )}
               </tbody>
             </table>
 
